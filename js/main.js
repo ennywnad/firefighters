@@ -3,6 +3,11 @@ const menuScreen = document.getElementById('menu-screen');
 const sceneSelectScreen = document.getElementById('scene-select-screen');
 const fireGameScreen = document.getElementById('fire-game-screen');
 const animalRescueScreen = document.getElementById('animal-rescue-screen');
+const muteButton = document.getElementById('mute-button');
+
+muteButton.addEventListener('click', () => {
+    toggleBackgroundMusic();
+});
 
 let activeGameIntervals = [];
 let chosenLevel = null;
@@ -35,6 +40,7 @@ document.querySelectorAll('.scene-button').forEach(button => {
             animalRescueScreen.classList.remove('hidden');
             startAnimalRescueGame();
         }
+        toggleBackgroundMusic(true);
     });
 });
 
@@ -48,13 +54,62 @@ function goToMenu() {
     animalRescueScreen.classList.add('hidden');
     sceneSelectScreen.classList.add('hidden');
     menuScreen.classList.remove('hidden');
+    toggleBackgroundMusic(false);
 }
 
 function startAudio() {
-    Tone.start();
+    if (Tone.context.state !== 'running') {
+        Tone.start();
+    }
+    if (!backgroundMusic) {
+        setupBackgroundMusic();
+    }
     window.removeEventListener('click', startAudio, true);
 }
 window.addEventListener('click', startAudio, true);
+
+// --- Background Music ---
+let backgroundMusic = null;
+let musicPlaying = false;
+
+function setupBackgroundMusic() {
+    const musicSynth = new Tone.FMSynth({
+        harmonicity: 1.5,
+        modulationIndex: 10,
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 },
+        modulation: { type: "square" },
+        modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0, release: 0.5 }
+    }).toDestination();
+    musicSynth.volume.value = -12; // Lower the volume
+
+    const melody = ['C4', 'E4', 'G4', 'C5', 'A4', 'G4', 'E4'];
+    let noteIndex = 0;
+
+    backgroundMusic = new Tone.Loop(time => {
+        let note = melody[noteIndex % melody.length];
+        musicSynth.triggerAttackRelease(note, '8n', time);
+        noteIndex++;
+    }, '4n');
+
+    Tone.Transport.start();
+}
+
+function toggleBackgroundMusic(forceState) {
+    const shouldBePlaying = forceState !== undefined ? forceState : !musicPlaying;
+    if (shouldBePlaying) {
+        if (!musicPlaying) {
+            backgroundMusic.start(0);
+            musicPlaying = true;
+        }
+    } else {
+        if (musicPlaying) {
+            backgroundMusic.stop();
+            musicPlaying = false;
+        }
+    }
+    muteButton.textContent = musicPlaying ? '🎵' : '🔇';
+}
 
 // --- Scene Particle Effects ---
 class SceneParticle {
