@@ -22,3 +22,4 @@ A simple, interactive browser game for toddlers, built with HTML, CSS, and JavaS
 
 ## Done
 * [x] **Chore:** Initial project setup and refactoring of HTML, CSS, and JS into separate files.
+* [x] **Chore:** Defined and documented the development workflow in `CONTRIBUTING.md`.
