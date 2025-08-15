@@ -327,6 +327,45 @@ function startAnimalRescueGame() {
     function createFireTruckObject() { return { x: 0, y: 0, width: 120, height: 70, coneButton: { x: 0, y: 0, radius: 15 }, ladderButton: { x: 0, y: 0, radius: 15 }, draw() { this.x = tree.x + 80; this.y = canvas.height - this.height - 40; ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.roundRect(this.x, this.y, this.width, this.height, 10); ctx.fill(); ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(this.x + 25, this.y + this.height, 18, 0, Math.PI * 2); ctx.arc(this.x + this.width - 25, this.y + this.height, 18, 0, Math.PI * 2); ctx.fill(); this.coneButton.x = this.x + 30; this.coneButton.y = this.y + 35; this.ladderButton.x = this.x + this.width - 30; this.ladderButton.y = this.y + 35; ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.arc(this.coneButton.x, this.coneButton.y, this.coneButton.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'white'; ctx.font = '20px Bangers'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('V', this.coneButton.x, this.coneButton.y + 2); ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.arc(this.ladderButton.x, this.ladderButton.y, this.ladderButton.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'white'; ctx.fillText('|||', this.ladderButton.x, this.ladderButton.y); if (gameState === 'START') highlight(this.coneButton.x, this.coneButton.y, this.coneButton.radius); if (gameState === 'CONE_PLACED') highlight(this.ladderButton.x, this.ladderButton.y, this.ladderButton.radius); } }; }
     let fireTruckRescue = createFireTruckObject();
 
+    function drawFirefighter(x, y, progress, angle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle); // Rotate the firefighter to match the ladder angle
+
+        // Body
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(-10, -15, 20, 30); // Simple rectangle body
+
+        // Head/Helmet
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(0, -25, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Limbs animation based on progress
+        const animationCycle = Math.sin(progress * 0.1);
+
+        // Arms
+        ctx.strokeStyle = '#34495e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(10 * animationCycle, -20 - 5 * animationCycle);
+        ctx.moveTo(0, -10);
+        ctx.lineTo(-10 * animationCycle, -20 + 5 * animationCycle);
+        ctx.stroke();
+
+        // Legs
+        ctx.beginPath();
+        ctx.moveTo(0, 15);
+        ctx.lineTo(-10 * animationCycle, 25 + 5 * animationCycle);
+        ctx.moveTo(0, 15);
+        ctx.lineTo(10 * animationCycle, 25 - 5 * animationCycle);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
     function drawScene() {
         ctx.fillStyle = currentScene.sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
         manageSceneParticles(canvas, ctx);
@@ -337,7 +376,19 @@ function startAnimalRescueGame() {
         if (gameState === 'AT_ANIMAL') highlight(animalPosition.x, animalPosition.y, 30);
         if (conePosition) { ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.moveTo(conePosition.x, conePosition.y - 40); ctx.lineTo(conePosition.x - 15, conePosition.y); ctx.lineTo(conePosition.x + 15, conePosition.y); ctx.closePath(); ctx.fill(); }
         if (gameState !== 'SELECT_ANIMAL' && gameState !== 'START' && gameState !== 'CONE_PLACED') { ctx.save(); ctx.translate(ladder.startX, ladder.startY); ctx.rotate(ladder.angle); ctx.fillStyle = '#bdc3c7'; ctx.fillRect(0, -5, ladder.currentLength, 10); ctx.fillStyle = '#7f8c8d'; for (let i = 20; i < ladder.currentLength - 10; i += 20) { ctx.fillRect(i, -8, 2, 16); } ctx.restore(); if (gameState === 'LADDER_EXTENDED') { ctx.save(); ctx.translate(ladder.startX, ladder.startY); ctx.rotate(ladder.angle); const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 8; ctx.fillStyle = `rgba(255, 255, 0, 0.4)`; ctx.fillRect(0, -10 - pulse / 2, ladder.currentLength, 20 + pulse); ctx.restore(); } }
-        if (gameState === 'CLIMBING' || gameState === 'AT_ANIMAL' || gameState === 'DESCENDING' || gameState === 'RESCUED') { const onLadderX = ladder.startX + Math.cos(ladder.angle) * firefighter.progress; const onLadderY = ladder.startY + Math.sin(ladder.angle) * firefighter.progress; firefighter.x = onLadderX; firefighter.y = onLadderY; ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(firefighter.x, firefighter.y, 15, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(firefighter.x, firefighter.y-15, 10, 0, Math.PI*2); ctx.fill(); if (firefighter.hasAnimal) { ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(selectedAnimal.emoji, firefighter.x + 10, firefighter.y - 10); } }
+        if (gameState === 'CLIMBING' || gameState === 'AT_ANIMAL' || gameState === 'DESCENDING' || gameState === 'RESCUED') {
+            const onLadderX = ladder.startX + Math.cos(ladder.angle) * firefighter.progress;
+            const onLadderY = ladder.startY + Math.sin(ladder.angle) * firefighter.progress;
+            firefighter.x = onLadderX;
+            firefighter.y = onLadderY;
+            drawFirefighter(firefighter.x, firefighter.y, firefighter.progress, ladder.angle + Math.PI / 2);
+            if (firefighter.hasAnimal) {
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(selectedAnimal.emoji, firefighter.x + 15, firefighter.y - 15);
+            }
+        }
     }
     function highlight(x, y, radius) { const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 5; ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, radius + pulse, 0, Math.PI * 2); ctx.stroke(); }
     function update() { if (gameState === 'LADDER_EXTENDING') { if (ladder.currentLength < ladder.maxLength) { ladder.currentLength += 5; } else { ladder.currentLength = ladder.maxLength; gameState = 'LADDER_EXTENDED'; instructionText.textContent = 'Click the ladder to climb!'; } } if (gameState === 'CLIMBING') { if (firefighter.progress < ladder.maxLength) { firefighter.progress += 2; } else { firefighter.progress = ladder.maxLength; gameState = 'AT_ANIMAL'; instructionText.textContent = `Click the ${selectedAnimal.type} to rescue it!`; } } if (gameState === 'DESCENDING') { if (firefighter.progress > 0) { firefighter.progress -= 2; } else { firefighter.progress = 0; gameState = 'RESCUED'; instructionText.textContent = 'Great job! Animal saved!'; animalSynth.triggerAttackRelease(selectedAnimal.sound, '4n'); showHeroReport(`You rescued the ${selectedAnimal.type}! Well done.`); } } }
