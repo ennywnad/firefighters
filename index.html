@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firefighter Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Menu Screen -->
+    <div id="menu-screen" class="game-screen menu-background">
+        <h1 class="menu-title">Firefighter Adventures</h1>
+        <button class="level-button menu-button-lg" data-level="fire">🔥 Fire Rescue 🔥</button>
+        <button class="level-button menu-button-lg" data-level="animal">🐱 Animal Rescue 🌳</button>
+    </div>
+
+    <!-- Scene Select Screen -->
+    <div id="scene-select-screen" class="game-screen menu-background hidden">
+        <h1 class="menu-title">Choose a Scene</h1>
+        <div>
+            <button class="scene-button menu-button-lg" data-scene="day">☀️ Day</button>
+            <button class="scene-button menu-button-lg" data-scene="night">🌙 Night</button>
+        </div>
+        <div>
+            <button class="scene-button menu-button-lg" data-scene="autumn">🍂 Autumn</button>
+            <button class="scene-button menu-button-lg" data-scene="winter">❄️ Winter</button>
+        </div>
+        <button class="menu-button-lg back-button" onclick="goToMenu()">Back</button>
+    </div>
+
+    <!-- Fire Game Screen -->
+    <div id="fire-game-screen" class="game-screen hidden">
+        <div id="fire-game-title" class="title">Fire Rescue!</div>
+        <canvas id="fireGameCanvas"></canvas>
+        <div id="fire-game-instructions" class="instructions">Click the hose on the truck!</div>
+        <button class="menu-button" onclick="goToMenu()">Menu</button>
+        <div id="sound-controls">
+            <label for="sound-select">Water Sound:</label>
+            <select id="sound-select">
+                <option value="white" selected>Default</option>
+                <option value="pink">Deeper</option>
+                <option value="brown">Rumbly</option>
+                <option value="disable">Off</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Animal Rescue Screen -->
+    <div id="animal-rescue-screen" class="game-screen hidden">
+        <div class="title">Animal Rescue!</div>
+        <canvas id="animalRescueCanvas"></canvas>
+        <div id="animal-rescue-instructions" class="instructions">Choose an animal to rescue!</div>
+        <button class="menu-button" onclick="goToMenu()">Menu</button>
+        <div id="animal-select-menu">
+            <h2>Who needs saving?</h2>
+            <div>
+                <span class="animal-option" data-animal="kitty">🐱</span>
+                <span class="animal-option" data-animal="bird">🐦</span>
+                <span class="animal-option" data-animal="squirrel">🐿️</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
