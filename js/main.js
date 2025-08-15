@@ -4,9 +4,23 @@ const sceneSelectScreen = document.getElementById('scene-select-screen');
 const fireGameScreen = document.getElementById('fire-game-screen');
 const animalRescueScreen = document.getElementById('animal-rescue-screen');
 const muteButton = document.getElementById('mute-button');
+const heroReportScreen = document.getElementById('hero-report-screen');
+const heroReportMessage = document.getElementById('hero-report-message');
+const reportMenuButton = document.getElementById('report-menu-button');
+const reportPlayAgainButton = document.getElementById('report-play-again-button');
 
 muteButton.addEventListener('click', () => {
     toggleBackgroundMusic();
+});
+
+reportMenuButton.addEventListener('click', goToMenu);
+reportPlayAgainButton.addEventListener('click', () => {
+    heroReportScreen.classList.add('hidden');
+    if (chosenLevel === 'fire') {
+        startFireGame();
+    } else if (chosenLevel === 'animal') {
+        startAnimalRescueGame();
+    }
 });
 
 let activeGameIntervals = [];
@@ -44,6 +58,14 @@ document.querySelectorAll('.scene-button').forEach(button => {
     });
 });
 
+function showHeroReport(message) {
+    heroReportMessage.textContent = message;
+    fireGameScreen.classList.add('hidden');
+    animalRescueScreen.classList.add('hidden');
+    heroReportScreen.classList.remove('hidden');
+    toggleBackgroundMusic(false);
+}
+
 function goToMenu() {
     activeGameIntervals.forEach(clearInterval);
     activeGameIntervals = [];
@@ -53,6 +75,7 @@ function goToMenu() {
     fireGameScreen.classList.add('hidden');
     animalRescueScreen.classList.add('hidden');
     sceneSelectScreen.classList.add('hidden');
+    heroReportScreen.classList.add('hidden');
     menuScreen.classList.remove('hidden');
     toggleBackgroundMusic(false);
 }
@@ -174,7 +197,7 @@ function startFireGame() {
     const instructionText = document.getElementById('fire-game-instructions');
     const titleElement = document.getElementById('fire-game-title');
 
-    let isSpraying, mouse, fires, waterParticles, buildings, gameState;
+    let isSpraying, mouse, fires, waterParticles, buildings, gameState, firesExtinguished;
     let currentWaterSynth;
 
     const extinguishSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination();
@@ -193,6 +216,7 @@ function startFireGame() {
         buildings = [];
         sceneParticles = [];
         gameState = 'START';
+        firesExtinguished = 0;
         currentWaterSynth = whiteNoiseSynth;
         document.getElementById('sound-select').value = 'white';
         instructionText.textContent = 'Click the hose on the truck!';
@@ -223,7 +247,7 @@ function startFireGame() {
     function spawnFire() { if (fires.length < 5 && buildings.length > 0) { const building = buildings[Math.floor(Math.random() * buildings.length)]; const x = building.x + Math.random() * (building.width - 40) + 20; const y = building.y; fires.push(new Fire(x, y)); } }
     function drawHose() { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 10; ctx.beginPath(); if (gameState === 'TRUCK_CONNECTED') { ctx.moveTo(fireTruck.port.x, fireTruck.port.y); ctx.quadraticCurveTo((fireTruck.port.x + mouse.x) / 2, mouse.y - 50, mouse.x, mouse.y); } else if (gameState === 'HYDRANT_CONNECTED' || gameState === 'SPRAYING') { ctx.moveTo(fireTruck.port.x, fireTruck.port.y); const controlY = Math.min(fireTruck.port.y, hydrant.port.y) + 100; ctx.quadraticCurveTo((fireTruck.port.x + hydrant.port.x) / 2, controlY, hydrant.port.x, hydrant.port.y); } ctx.stroke(); }
     function handleWater() { if (isSpraying && gameState === 'SPRAYING') { const nozzleEndX = fireTruck.nozzle.x + Math.cos(fireTruck.nozzle.angle) * fireTruck.nozzle.length; const nozzleEndY = fireTruck.nozzle.y + Math.sin(fireTruck.nozzle.angle) * fireTruck.nozzle.length; for(let i = 0; i < 3; i++) { waterParticles.push(new WaterParticle(nozzleEndX, nozzleEndY, fireTruck.nozzle.angle)); } if (Tone.context.state === 'running' && currentWaterSynth) { currentWaterSynth.triggerAttack(); } } waterParticles.forEach((p, index) => { p.update(); p.draw(); if (p.y > canvas.height || p.x < 0 || p.x > canvas.width) { waterParticles.splice(index, 1); } }); }
-    function handleFires() { fires.forEach((fire, fireIndex) => { fire.update(); fire.draw(); waterParticles.forEach((particle, particleIndex) => { const dist = Math.hypot(particle.x - fire.x, (particle.y - (fire.y - fire.height/2))); if (dist < fire.width + particle.size) { waterParticles.splice(particleIndex, 1); fire.life -= 5; } }); if (fire.life <= 0) { if (Tone.context.state === 'running') { extinguishSynth.triggerAttackRelease('C4', '8n'); } fires.splice(fireIndex, 1); } }); }
+    function handleFires() { fires.forEach((fire, fireIndex) => { fire.update(); fire.draw(); waterParticles.forEach((particle, particleIndex) => { const dist = Math.hypot(particle.x - fire.x, (particle.y - (fire.y - fire.height/2))); if (dist < fire.width + particle.size) { waterParticles.splice(particleIndex, 1); fire.life -= 5; } }); if (fire.life <= 0) { if (Tone.context.state === 'running') { extinguishSynth.triggerAttackRelease('C4', '8n'); } fires.splice(fireIndex, 1); firesExtinguished++; } }); }
     function updateNozzleAngle() { if (gameState !== 'SPRAYING') return; const dx = mouse.x - fireTruck.nozzle.x; const dy = mouse.y - fireTruck.nozzle.y; fireTruck.nozzle.angle = Math.atan2(dy, dx); }
     function getMousePos(evt) { const rect = canvas.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
     function handleInteraction(e) { const pos = getMousePos(e.touches ? e.touches[0] : e); mouse = pos; if (e.type === 'mousedown' || e.type === 'touchstart') { switch(gameState) { case 'START': if (Math.hypot(pos.x - fireTruck.coiledHose.x, pos.y - fireTruck.coiledHose.y) < fireTruck.coiledHose.radius) { gameState = 'HOSE_UNRAVELED'; instructionText.textContent = 'Click the black circle on the truck!'; connectSynth.triggerAttackRelease('C3', '8n'); } break; case 'HOSE_UNRAVELED': if (Math.hypot(pos.x - fireTruck.port.x, pos.y - fireTruck.port.y) < fireTruck.port.radius) { gameState = 'TRUCK_CONNECTED'; instructionText.textContent = 'Drag the hose to the hydrant!'; connectSynth.triggerAttackRelease('E3', '8n'); } break; case 'TRUCK_CONNECTED': if (Math.hypot(pos.x - hydrant.port.x, pos.y - hydrant.port.y) < hydrant.port.radius) { gameState = 'HYDRANT_CONNECTED'; instructionText.textContent = 'Turn the red valve on the hydrant!'; connectSynth.triggerAttackRelease('G3', '8n'); } break; case 'HYDRANT_CONNECTED': const v = hydrant.valve; if (pos.x > v.x && pos.x < v.x + v.width && pos.y > v.y && pos.y < v.y + v.height) { gameState = 'SPRAYING'; instructionText.textContent = 'Aim the nozzle and spray!'; connectSynth.triggerAttackRelease('C4', '8n'); } break; case 'SPRAYING': isSpraying = true; break; } } }
@@ -236,7 +260,15 @@ function startFireGame() {
         fireTruck.draw(); hydrant.draw(); drawHose();
         updateNozzleAngle(); handleWater(); handleFires();
         if (fires.length > 0) { titleElement.classList.add('pulsing'); } else { titleElement.classList.remove('pulsing'); }
-        window.fireGameAnimationId = requestAnimationFrame(gameLoop);
+
+        if (gameState !== 'WON' && fires.length === 0 && firesExtinguished > 0) {
+            gameState = 'WON';
+            showHeroReport(`Great job! You put out ${firesExtinguished} fires.`);
+        }
+
+        if (gameState !== 'WON') {
+            window.fireGameAnimationId = requestAnimationFrame(gameLoop);
+        }
     }
 
     function resizeCanvas() {
@@ -308,7 +340,7 @@ function startAnimalRescueGame() {
         if (gameState === 'CLIMBING' || gameState === 'AT_ANIMAL' || gameState === 'DESCENDING' || gameState === 'RESCUED') { const onLadderX = ladder.startX + Math.cos(ladder.angle) * firefighter.progress; const onLadderY = ladder.startY + Math.sin(ladder.angle) * firefighter.progress; firefighter.x = onLadderX; firefighter.y = onLadderY; ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(firefighter.x, firefighter.y, 15, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(firefighter.x, firefighter.y-15, 10, 0, Math.PI*2); ctx.fill(); if (firefighter.hasAnimal) { ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(selectedAnimal.emoji, firefighter.x + 10, firefighter.y - 10); } }
     }
     function highlight(x, y, radius) { const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 5; ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, radius + pulse, 0, Math.PI * 2); ctx.stroke(); }
-    function update() { if (gameState === 'LADDER_EXTENDING') { if (ladder.currentLength < ladder.maxLength) { ladder.currentLength += 5; } else { ladder.currentLength = ladder.maxLength; gameState = 'LADDER_EXTENDED'; instructionText.textContent = 'Click the ladder to climb!'; } } if (gameState === 'CLIMBING') { if (firefighter.progress < ladder.maxLength) { firefighter.progress += 2; } else { firefighter.progress = ladder.maxLength; gameState = 'AT_ANIMAL'; instructionText.textContent = `Click the ${selectedAnimal.type} to rescue it!`; } } if (gameState === 'DESCENDING') { if (firefighter.progress > 0) { firefighter.progress -= 2; } else { firefighter.progress = 0; gameState = 'RESCUED'; instructionText.textContent = 'Great job! Animal saved!'; animalSynth.triggerAttackRelease(selectedAnimal.sound, '4n'); } } }
+    function update() { if (gameState === 'LADDER_EXTENDING') { if (ladder.currentLength < ladder.maxLength) { ladder.currentLength += 5; } else { ladder.currentLength = ladder.maxLength; gameState = 'LADDER_EXTENDED'; instructionText.textContent = 'Click the ladder to climb!'; } } if (gameState === 'CLIMBING') { if (firefighter.progress < ladder.maxLength) { firefighter.progress += 2; } else { firefighter.progress = ladder.maxLength; gameState = 'AT_ANIMAL'; instructionText.textContent = `Click the ${selectedAnimal.type} to rescue it!`; } } if (gameState === 'DESCENDING') { if (firefighter.progress > 0) { firefighter.progress -= 2; } else { firefighter.progress = 0; gameState = 'RESCUED'; instructionText.textContent = 'Great job! Animal saved!'; animalSynth.triggerAttackRelease(selectedAnimal.sound, '4n'); showHeroReport(`You rescued the ${selectedAnimal.type}! Well done.`); } } }
     function isClickOnLadder(pos) { const translatedX = pos.x - ladder.startX; const translatedY = pos.y - ladder.startY; const rotatedX = translatedX * Math.cos(-ladder.angle) - translatedY * Math.sin(-ladder.angle); const rotatedY = translatedX * Math.sin(-ladder.angle) + translatedY * Math.cos(-ladder.angle); return (rotatedX >= 0 && rotatedX <= ladder.maxLength && rotatedY >= -15 && rotatedY <= 15); }
     function handleInteraction(e) { const pos = { x: e.offsetX, y: e.offsetY }; if (e.type === 'mousedown') { switch(gameState) { case 'START': if (Math.hypot(pos.x - fireTruckRescue.coneButton.x, pos.y - fireTruckRescue.coneButton.y) < fireTruckRescue.coneButton.radius) { conePosition = { x: fireTruckRescue.x - 50, y: canvas.height - 40 }; gameState = 'CONE_PLACED'; instructionText.textContent = 'Click the ladder button!'; actionSynth.triggerAttackRelease('C3', '8n'); } break; case 'CONE_PLACED': if (Math.hypot(pos.x - fireTruckRescue.ladderButton.x, pos.y - fireTruckRescue.ladderButton.y) < fireTruckRescue.ladderButton.radius) { ladder.startX = fireTruckRescue.x; ladder.startY = fireTruckRescue.y; ladder.endX = animalPosition.x; ladder.endY = animalPosition.y; const dx = ladder.endX - ladder.startX; const dy = ladder.endY - ladder.startY; ladder.angle = Math.atan2(dy, dx); ladder.maxLength = Math.hypot(dx, dy); gameState = 'LADDER_EXTENDING'; instructionText.textContent = 'Extending ladder...'; actionSynth.triggerAttackRelease('E3', '2n'); } break; case 'LADDER_EXTENDED': if (isClickOnLadder(pos)) { gameState = 'CLIMBING'; instructionText.textContent = 'Climbing up!'; } break; case 'AT_ANIMAL': if (Math.hypot(pos.x - animalPosition.x, pos.y - animalPosition.y) < 30) { firefighter.hasAnimal = true; gameState = 'DESCENDING'; instructionText.textContent = 'Coming down!'; actionSynth.triggerAttackRelease('G3', '8n'); } break; } } }
 

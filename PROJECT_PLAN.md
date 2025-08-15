@@ -7,8 +7,7 @@ A simple, interactive browser game for toddlers, built with HTML, CSS, and JavaS
 
 ## Development Backlog (To-Do)
 * [ ] **Feature:** Add a third game level (e.g., "Helicopter Water Drop").
-* [ ] **Feature:** Add simple background music with a mute/unmute button.
-* [ ] **Feature:** Implement a simple reward system (e.g., collect a "Great Job!" star after completing a level).
+* [ ] **Feature:** Implement a 'Hero's Report' at the end of levels.
 * [ ] **Enhancement:** Improve mobile/touch-screen responsiveness and controls.
 * [ ] **Enhancement:** Add more animations (e.g., firefighter character climbing ladder, truck wheels spinning).
 * [ ] **Code:** Convert game logic to use ES6 Classes for better organization (e.g., a `Fire` class, `Firefighter` class).
@@ -23,3 +22,4 @@ A simple, interactive browser game for toddlers, built with HTML, CSS, and JavaS
 ## Done
 * [x] **Chore:** Initial project setup and refactoring of HTML, CSS, and JS into separate files.
 * [x] **Chore:** Defined and documented the development workflow in `CONTRIBUTING.md`.
+* [x] **Feature:** Added simple background music with a mute/unmute button.
