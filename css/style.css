@@ -171,3 +171,29 @@ canvas {
 .animal-option:hover {
     transform: scale(1.2);
 }
+
+/* --- Level Progression --- */
+.level-button.locked {
+    background-color: #95a5a6;
+    box-shadow: 0 5px 0 #7f8c8d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.level-button.locked::after {
+    content: '🔒';
+    position: absolute;
+    right: 15px;
+    font-size: 2rem;
+}
+#reset-progress-button {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.8rem;
+    background-color: #c0392b;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid white;
+    cursor: pointer;
+}
