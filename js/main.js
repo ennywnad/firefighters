@@ -39,7 +39,18 @@ document.querySelectorAll('.level-button').forEach(button => {
     button.addEventListener('click', () => {
         chosenLevel = button.dataset.level;
         menuScreen.classList.add('hidden');
-        sceneSelectScreen.classList.remove('hidden');
+        
+        // Truck building doesn't need scene selection
+        if (chosenLevel === 'truck') {
+            const truckScreen = document.getElementById('truck-building-screen');
+            if (truckScreen) {
+                truckScreen.classList.remove('hidden');
+            }
+            window.TruckBuildingGame();
+            toggleBackgroundMusic(true);
+        } else {
+            sceneSelectScreen.classList.remove('hidden');
+        }
     });
 });
 
@@ -76,6 +87,13 @@ function goToMenu() {
     animalRescueScreen.classList.add('hidden');
     sceneSelectScreen.classList.add('hidden');
     heroReportScreen.classList.add('hidden');
+    
+    // Hide truck building screen if it exists
+    const truckScreen = document.getElementById('truck-building-screen');
+    if (truckScreen) {
+        truckScreen.classList.add('hidden');
+    }
+    
     menuScreen.classList.remove('hidden');
     toggleBackgroundMusic(false);
 }
