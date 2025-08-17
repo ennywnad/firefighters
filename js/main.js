@@ -1,7 +1,7 @@
 // --- Global Navigation & Scene Management ---
 
 // Level Progression
-const levelOrder = ['fire', 'animal', 'truck', 'station'];
+const levelOrder = ['fire', 'animal', 'truck', 'station', 'emergency'];
 
 function getUnlockedLevel() {
     return parseInt(localStorage.getItem('firefighterUnlockedLevel') || '1', 10);
@@ -86,6 +86,24 @@ document.querySelectorAll('.level-button').forEach(button => {
         } else if (chosenLevel === 'station') {
             const stationGame = new StationMorningGame();
             stationGame.gameScreen.classList.remove('hidden');
+            toggleBackgroundMusic(true);
+        } else if (chosenLevel === 'emergency') {
+            let emergencyScreen = document.getElementById('emergency-response-screen');
+            if (!emergencyScreen) {
+                emergencyScreen = document.createElement('div');
+                emergencyScreen.id = 'emergency-response-screen';
+                emergencyScreen.className = 'game-screen hidden';
+                emergencyScreen.innerHTML = `
+                    <div class="title">Emergency!</div>
+                    <canvas id="emergencyResponseCanvas"></canvas>
+                    <div id="emergency-response-instructions" class="instructions">Answer the call!</div>
+                    <button class="menu-button" onclick="goToMenu()">Menu</button>
+                `;
+                document.body.appendChild(emergencyScreen);
+            }
+            emergencyScreen.classList.remove('hidden');
+            const emergencyGame = new EmergencyResponseLevel();
+            emergencyGame.start();
             toggleBackgroundMusic(true);
         } else {
             sceneSelectScreen.classList.remove('hidden');
