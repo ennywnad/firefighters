@@ -79,10 +79,38 @@ class FireRescueLevel {
     }
     
     start() {
+        // Reset game state
+        this.gameState = 'START';
+        this.isSpraying = false;
+        this.fires = [];
+        this.waterDrops = [];
+        this.firesExtinguished = 0;
+        this.waterUsed = 0;
+        this.totalFires = 0;
+        this.gameStartTime = Date.now();
+        this.nozzle.attachedToTruck = false;
+        this.nozzle.x = 200;
+        this.nozzle.y = 300;
+        this.nozzle.angle = 0;
+        
         this.gameScreen.classList.remove('hidden');
         this.resizeCanvas();
         // Double-check sizing after a moment
         setTimeout(() => this.resizeCanvas(), 50);
+        
+        // Start scoreboard tracking
+        if (window.firefighterScoreboard) {
+            window.firefighterScoreboard.startSession();
+        }
+        
+        // Store reference for scoreboard access
+        window.currentFireRescueGame = this;
+        
+        // Reset instructions
+        this.instructionText.textContent = 'Click the hose on the truck!';
+        
+        // Respawn initial fires
+        this.spawnInitialFires();
     }
     
     resizeCanvas() {
@@ -345,6 +373,11 @@ class FireRescueLevel {
                     life: 60
                 });
                 this.waterUsed++; // Track water usage
+                
+                // Track water usage for scoreboard
+                if (window.firefighterScoreboard) {
+                    window.firefighterScoreboard.recordWaterUsed(0.5); // Each water drop = 0.5 gallons
+                }
             }
         }
         
@@ -377,13 +410,25 @@ class FireRescueLevel {
                 this.fires.splice(fireIndex, 1);
                 this.firesExtinguished++;
                 this.actionSynth.triggerAttackRelease('A5', '4n');
+                
+                // Track fire extinguished for scoreboard
+                if (window.firefighterScoreboard) {
+                    window.firefighterScoreboard.recordFireExtinguished();
+                }
             }
         });
         
         // Check win condition
         if (this.fires.length === 0 && this.firesExtinguished > 0) {
             setTimeout(() => {
-                showHeroReport(`Amazing work! You extinguished ${this.firesExtinguished} fires!`);
+                // End session and show scoreboard instead of hero report
+                if (window.firefighterScoreboard) {
+                    window.firefighterScoreboard.endSession();
+                    window.firefighterScoreboard.showScoreboard();
+                } else {
+                    // Fallback to original hero report
+                    showHeroReport(`Amazing work! You extinguished ${this.firesExtinguished} fires!`);
+                }
             }, 1000);
         }
     }
@@ -639,7 +684,7 @@ ${this.firesExtinguished === this.totalFires ?
     gameLoop() {
         this.update();
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        window.fireGameAnimationId = requestAnimationFrame(() => this.gameLoop());
     }
 }
 

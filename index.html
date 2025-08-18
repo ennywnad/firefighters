@@ -52,6 +52,7 @@
         <canvas id="fireGameCanvas"></canvas>
         <div id="fire-game-instructions" class="instructions">Click the hose on the truck!</div>
         <button class="menu-button" onclick="goToMenu()">Menu</button>
+        <button id="end-fire-rescue-button" class="end-level-button" onclick="endFireRescue()">🏆 Show Scoreboard</button>
         <div id="sound-controls">
             <label for="sound-select">Water Sound:</label>
             <select id="sound-select">
@@ -60,6 +61,56 @@
                 <option value="brown">Rumbly</option>
                 <option value="disable">Off</option>
             </select>
+        </div>
+    </div>
+
+    <!-- Firefighter Scoreboard -->
+    <div id="firefighter-scoreboard" class="game-screen hidden">
+        <div class="scoreboard-header">
+            <h2 class="scoreboard-title">🚒 FIREFIGHTER SCOREBOARD 🚒</h2>
+            <div class="firefighter-badge">🏅</div>
+        </div>
+        
+        <div class="scoreboard-content">
+            <div class="performance-stats">
+                <div class="stat-row">
+                    <span class="stat-label">🔥 Fires Extinguished:</span>
+                    <span id="fires-count" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">💧 Water Used:</span>
+                    <span id="water-used" class="stat-value">0 gallons</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">⏱️ Response Time:</span>
+                    <span id="response-time" class="stat-value">0:00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🎯 Accuracy:</span>
+                    <span id="accuracy" class="stat-value">100%</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🌟 Efficiency Score:</span>
+                    <span id="efficiency-score" class="stat-value">A+</span>
+                </div>
+            </div>
+            
+            <div class="achievement-section">
+                <h3 class="achievement-title">🏆 ACHIEVEMENTS</h3>
+                <div id="achievements-list" class="achievements-grid">
+                    <!-- Achievements will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="hero-message">
+                <h3 id="hero-title" class="hero-title">OUTSTANDING FIREFIGHTER!</h3>
+                <p id="hero-description" class="hero-description">You've shown excellent fire safety skills!</p>
+            </div>
+        </div>
+        
+        <div class="scoreboard-actions">
+            <button class="menu-button-lg" onclick="restartFireRescue()">🔥 Play Again</button>
+            <button class="menu-button" onclick="goToMenu()">📱 Main Menu</button>
         </div>
     </div>
 
@@ -91,6 +142,12 @@
         <button id="mute-button" style="background-color: #f39c12; color: white; padding: 5px 10px; border-radius: 10px; font-size: 1.5rem; border: 2px solid white;">🔇</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="js/SoundManager.js"></script>
+    <script src="js/GameLevel.js"></script>
+    <script src="js/InteractionHandler.js"></script>
+    <script src="js/VoiceGuide.js"></script>
+    <script src="js/LayeredRenderer.js"></script>
+    <script src="js/FirefighterScoreboard.js"></script>
     <script src="js/animations/animationUtils.js"></script>
     <script src="js/animations/hoseAnimation.js"></script>
     <script src="js/levels/truckBuilding.js"></script>
