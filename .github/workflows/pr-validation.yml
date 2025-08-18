@@ -1,0 +1,89 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate file completeness
+        run: |
+          # Check for critical game files
+          REQUIRED_FILES=(
+            "js/GameLevel.js"
+            "js/InteractionHandler.js"
+            "js/LayeredRenderer.js"
+            "js/SoundManager.js"
+            "js/VoiceGuide.js"
+            "js/main.js"
+            "index.html"
+          )
+          
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [ ${#MISSING_FILES[@]} -ne 0 ]; then
+            echo "❌ Missing critical files:"
+            printf '%s\n' "${MISSING_FILES[@]}"
+            exit 1
+          fi
+          
+          echo "✅ All critical files present"
+
+      - name: Check for large commits
+        run: |
+          # Flag commits with more than 500 lines changed
+          git log --pretty=format:"%h %s" --numstat ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | \
+          awk '
+            /^[0-9a-f]+ / { 
+              if (NR > 1 && total > 500) {
+                print "⚠️  Large commit detected: " prev_commit " (" total " lines)"
+                large_commits++
+              }
+              prev_commit = $0
+              total = 0
+            }
+            /^[0-9]+\t[0-9]+/ { 
+              total += $1 + $2 
+            }
+            END {
+              if (total > 500) {
+                print "⚠️  Large commit detected: " prev_commit " (" total " lines)"
+                large_commits++
+              }
+              if (large_commits > 0) {
+                print "\n❌ Found " large_commits " large commits. Consider breaking them down."
+                exit 1
+              }
+            }
+          '
+
+      - name: Validate game functionality
+        run: |
+          # Basic syntax check for JavaScript files
+          find js -name "*.js" -exec node -c {} \;
+          echo "✅ JavaScript syntax validation passed"
+
+      - name: Check commit message format
+        run: |
+          # Validate conventional commit format
+          git log --pretty=format:"%s" ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} | \
+          while read -r message; do
+            if ! echo "$message" | grep -qE '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+'; then
+              echo "❌ Invalid commit message format: $message"
+              echo "Expected format: type(scope): description"
+              exit 1
+            fi
+          done
+          echo "✅ All commit messages follow conventional format"
