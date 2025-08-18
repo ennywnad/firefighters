@@ -3,7 +3,12 @@
 // Level Progression
 const levelOrder = ['fire', 'animal', 'truck', 'station', 'emergency'];
 
+// Debug mode toggle
+let debugMode = localStorage.getItem('firefighterDebugMode') === 'true';
+
+
 function getUnlockedLevel() {
+    if (debugMode) return levelOrder.length; // Unlock all levels in debug mode
     return parseInt(localStorage.getItem('firefighterUnlockedLevel') || '1', 10);
 }
 
@@ -27,18 +32,26 @@ function updateLevelButtons() {
             button.classList.add('locked');
         }
     });
+    
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     updateLevelButtons();
+    // Set default scene selection
+    const defaultSceneButton = document.querySelector('[data-scene="day"]');
+    if (defaultSceneButton) {
+        defaultSceneButton.classList.add('selected');
+    }
+    
     document.getElementById('reset-progress-button').addEventListener('click', () => {
         localStorage.removeItem('firefighterUnlockedLevel');
         updateLevelButtons();
     });
+    
 });
 
 const menuScreen = document.getElementById('menu-screen');
-const sceneSelectScreen = document.getElementById('scene-select-screen');
+const optionsScreen = document.getElementById('options-screen');
 const fireGameScreen = document.getElementById('fire-game-screen');
 const animalRescueScreen = document.getElementById('animal-rescue-screen');
 const muteButton = document.getElementById('mute-button');
@@ -82,10 +95,22 @@ document.querySelectorAll('.level-button').forEach(button => {
         if (chosenLevel === 'truck') {
             const truckGame = new TruckBuildingGame();
             truckGame.gameScreen.classList.remove('hidden');
+            // Force canvas resize after screen is visible
+            setTimeout(() => {
+                truckGame.resizeCanvas();
+                // Try again after DOM settles
+                setTimeout(() => truckGame.resizeCanvas(), 100);
+            }, 10);
             toggleBackgroundMusic(true);
         } else if (chosenLevel === 'station') {
             const stationGame = new StationMorningGame();
             stationGame.gameScreen.classList.remove('hidden');
+            // Force canvas resize after screen is visible
+            setTimeout(() => {
+                stationGame.resizeCanvas();
+                // Try again after DOM settles
+                setTimeout(() => stationGame.resizeCanvas(), 100);
+            }, 10);
             toggleBackgroundMusic(true);
         } else if (chosenLevel === 'emergency') {
             let emergencyScreen = document.getElementById('emergency-response-screen');
@@ -103,28 +128,65 @@ document.querySelectorAll('.level-button').forEach(button => {
             }
             emergencyScreen.classList.remove('hidden');
             const emergencyGame = new EmergencyResponseLevel();
-            emergencyGame.start();
+            setTimeout(() => {
+                emergencyGame.start();
+                // Try resizing again after DOM settles
+                setTimeout(() => emergencyGame.resizeCanvas(), 100);
+            }, 10);
             toggleBackgroundMusic(true);
         } else {
-            sceneSelectScreen.classList.remove('hidden');
+            // For fire and animal rescue, go directly to the level (default to day scene)
+            currentScene = scenes.day;
+            if (chosenLevel === 'fire') {
+                const fireGame = new FireRescueLevel();
+                fireGame.start();
+            } else if (chosenLevel === 'animal') {
+                animalRescueScreen.classList.remove('hidden');
+                setTimeout(() => startAnimalRescueGame(), 10);
+            }
+            toggleBackgroundMusic(true);
         }
     });
 });
 
+// Options menu handling
+document.getElementById('options-button').addEventListener('click', () => {
+    menuScreen.classList.add('hidden');
+    optionsScreen.classList.remove('hidden');
+    updateDebugStatus();
+});
+
+// Scene selection in options menu
 document.querySelectorAll('.scene-button').forEach(button => {
     button.addEventListener('click', () => {
         currentScene = scenes[button.dataset.scene];
-        sceneSelectScreen.classList.add('hidden');
-        if (chosenLevel === 'fire') {
-            fireGameScreen.classList.remove('hidden');
-            startFireGame();
-        } else if (chosenLevel === 'animal') {
-            animalRescueScreen.classList.remove('hidden');
-            startAnimalRescueGame();
-        }
-        toggleBackgroundMusic(true);
+        // Visual feedback - highlight selected scene
+        document.querySelectorAll('.scene-button').forEach(b => b.classList.remove('selected'));
+        button.classList.add('selected');
     });
 });
+
+// Debug toggle functionality
+document.getElementById('debug-toggle-button').addEventListener('click', () => {
+    debugMode = !debugMode;
+    localStorage.setItem('firefighterDebugMode', debugMode.toString());
+    updateDebugStatus();
+    updateLevelButtons();
+});
+
+function updateDebugStatus() {
+    const statusSpan = document.getElementById('debug-status');
+    const button = document.getElementById('debug-toggle-button');
+    if (debugMode) {
+        statusSpan.textContent = 'ON';
+        statusSpan.style.color = '#27ae60';
+        button.style.backgroundColor = '#27ae60';
+    } else {
+        statusSpan.textContent = 'OFF';
+        statusSpan.style.color = '#e74c3c';
+        button.style.backgroundColor = '#e74c3c';
+    }
+}
 
 function showHeroReport(message) {
     const currentLevelNumber = levelOrder.indexOf(chosenLevel) + 1;
@@ -133,7 +195,8 @@ function showHeroReport(message) {
     }
 
     heroReportMessage.textContent = message;
-    fireGameScreen.classList.add('hidden');
+    const fireGameScreen = document.getElementById('fire-game-screen');
+    if (fireGameScreen) fireGameScreen.classList.add('hidden');
     animalRescueScreen.classList.add('hidden');
     const truckScreen = document.getElementById('truck-building-screen');
     if (truckScreen) truckScreen.classList.add('hidden');
@@ -150,9 +213,10 @@ function goToMenu() {
     if (window.fireGameAnimationId) cancelAnimationFrame(window.fireGameAnimationId);
     if (window.animalRescueAnimationId) cancelAnimationFrame(window.animalRescueAnimationId);
 
-    fireGameScreen.classList.add('hidden');
+    const fireGameScreen = document.getElementById('fire-game-screen');
+    if (fireGameScreen) fireGameScreen.classList.add('hidden');
     animalRescueScreen.classList.add('hidden');
-    sceneSelectScreen.classList.add('hidden');
+    optionsScreen.classList.add('hidden');
     heroReportScreen.classList.add('hidden');
     
     // Hide truck building screen if it exists

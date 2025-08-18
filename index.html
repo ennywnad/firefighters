@@ -18,21 +18,32 @@
         <button class="level-button menu-button-lg" data-level="truck">🔧 Build a Truck 🚒</button>
         <button class="level-button menu-button-lg" data-level="station">🏢 Station Morning ☀️</button>
         <button class="level-button menu-button-lg" data-level="emergency">🚨 Emergency Response 🚨</button>
-        <button id="reset-progress-button">Reset Progress</button>
+        <button id="options-button">⚙️ Options</button>
     </div>
 
-    <!-- Scene Select Screen -->
-    <div id="scene-select-screen" class="game-screen menu-background hidden">
-        <h1 class="menu-title">Choose a Scene</h1>
-        <div>
-            <button class="scene-button menu-button-lg" data-scene="day">☀️ Day</button>
-            <button class="scene-button menu-button-lg" data-scene="night">🌙 Night</button>
+    <!-- Options Menu -->
+    <div id="options-screen" class="game-screen menu-background hidden">
+        <h1 class="menu-title">Options</h1>
+        
+        <div class="options-section">
+            <h2>🌅 Scene Selection</h2>
+            <div>
+                <button class="scene-button menu-button-lg" data-scene="day">☀️ Day</button>
+                <button class="scene-button menu-button-lg" data-scene="night">🌙 Night</button>
+            </div>
+            <div>
+                <button class="scene-button menu-button-lg" data-scene="autumn">🍂 Autumn</button>
+                <button class="scene-button menu-button-lg" data-scene="winter">❄️ Winter</button>
+            </div>
         </div>
-        <div>
-            <button class="scene-button menu-button-lg" data-scene="autumn">🍂 Autumn</button>
-            <button class="scene-button menu-button-lg" data-scene="winter">❄️ Winter</button>
+        
+        <div class="options-section">
+            <h2>🔧 Developer Options</h2>
+            <button id="debug-toggle-button" class="menu-button-lg">🐛 Debug Mode: <span id="debug-status">OFF</span></button>
+            <button id="reset-progress-button" class="menu-button-lg">🗑️ Reset Progress</button>
         </div>
-        <button class="menu-button-lg back-button" onclick="goToMenu()">Back</button>
+        
+        <button class="menu-button-lg back-button" onclick="goToMenu()">Back to Menu</button>
     </div>
 
     <!-- Fire Game Screen -->
@@ -84,9 +95,10 @@
     <script src="js/animations/hoseAnimation.js"></script>
     <script src="js/levels/truckBuilding.js"></script>
     <script src="js/levels/stationMorning.js"></script>
-    <script src="js/levels/fireRescue.js"></script>
+    <script src="js/levels/fireRescue2.js"></script>
     <script src="js/levels/animalRescue.js"></script>
     <script src="js/levels/emergencyResponse.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/testing.js"></script>
 </body>
 </html>
