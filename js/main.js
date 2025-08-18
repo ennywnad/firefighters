@@ -208,32 +208,38 @@ function showHeroReport(message) {
 }
 
 function goToMenu() {
+    // Clear all intervals and animation frames
     activeGameIntervals.forEach(clearInterval);
     activeGameIntervals = [];
+    
+    // Cancel all animation frames
     if (window.fireGameAnimationId) cancelAnimationFrame(window.fireGameAnimationId);
     if (window.animalRescueAnimationId) cancelAnimationFrame(window.animalRescueAnimationId);
+    if (window.truckBuildingAnimationId) cancelAnimationFrame(window.truckBuildingAnimationId);
+    if (window.stationMorningAnimationId) cancelAnimationFrame(window.stationMorningAnimationId);
+    if (window.emergencyResponseAnimationId) cancelAnimationFrame(window.emergencyResponseAnimationId);
 
-    const fireGameScreen = document.getElementById('fire-game-screen');
-    if (fireGameScreen) fireGameScreen.classList.add('hidden');
-    animalRescueScreen.classList.add('hidden');
-    optionsScreen.classList.add('hidden');
-    heroReportScreen.classList.add('hidden');
+    // Hide all game screens
+    const allScreens = document.querySelectorAll('.game-screen');
+    allScreens.forEach(screen => screen.classList.add('hidden'));
     
-    // Hide truck building screen if it exists
-    const truckScreen = document.getElementById('truck-building-screen');
-    if (truckScreen) {
-        truckScreen.classList.add('hidden');
-    }
-    
-    // Hide station morning screen if it exists
-    const stationScreen = document.getElementById('station-morning-screen');
-    if (stationScreen) {
-        stationScreen.classList.add('hidden');
-    }
-    
+    // Show menu screen
     menuScreen.classList.remove('hidden');
-    toggleBackgroundMusic(false);
-    updateLevelButtons(); // Update buttons when returning to menu
+}
+
+// Utility function to switch between screens
+function showScreen(screenId) {
+    // Hide all game screens
+    const allScreens = document.querySelectorAll('.game-screen');
+    allScreens.forEach(screen => screen.classList.add('hidden'));
+    
+    // Show target screen
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+    } else {
+        console.warn(`Screen ${screenId} not found`);
+    }
 }
 
 function startAudio() {

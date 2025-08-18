@@ -158,6 +158,70 @@ class Particle {
                 this.rotationSpeed = (Math.random() - 0.5) * 0.2;
                 this.shape = Math.random() > 0.5 ? 'square' : 'circle';
                 break;
+                
+            case 'water':
+                this.color = `rgba(100, 150, 255, ${0.6 + Math.random() * 0.4})`;
+                this.size = Math.random() * 4 + 2;
+                this.velocity.x += (Math.random() - 0.5) * 2;
+                this.velocity.y = Math.random() * 3 + 1;
+                this.gravity = 0.2;
+                break;
+                
+            case 'steam':
+                this.color = `rgba(200, 200, 200, ${0.3 + Math.random() * 0.3})`;
+                this.size = Math.random() * 10 + 5;
+                this.velocity.y = -Math.random() * 2 - 1;
+                this.velocity.x = (Math.random() - 0.5) * 1;
+                this.gravity = -0.1; // Steam rises
+                this.fadeRate = 0.01;
+                break;
+                
+            case 'ember':
+                this.color = options.color || '#FF4500';
+                this.size = Math.random() * 3 + 1;
+                this.velocity.y = -Math.random() * 3 - 2;
+                this.twinkle = Math.random() * Math.PI * 2;
+                this.twinkleSpeed = 0.2 + Math.random() * 0.1;
+                break;
+                
+            case 'leaf':
+                const leafColors = ['#228B22', '#32CD32', '#90EE90', '#006400'];
+                this.color = leafColors[Math.floor(Math.random() * leafColors.length)];
+                this.size = Math.random() * 6 + 4;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.swayAmount = Math.random() * 2 + 1;
+                this.swaySpeed = Math.random() * 0.05 + 0.02;
+                this.time = 0;
+                break;
+                
+            case 'snowflake':
+                this.color = 'rgba(255, 255, 255, 0.8)';
+                this.size = Math.random() * 4 + 2;
+                this.velocity.y = Math.random() * 1 + 0.5;
+                this.velocity.x = (Math.random() - 0.5) * 0.5;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+                this.gravity = 0.01;
+                break;
+                
+            case 'heart':
+                this.color = options.color || '#FF69B4';
+                this.size = Math.random() * 8 + 6;
+                this.velocity.y = -Math.random() * 2 - 1;
+                this.velocity.x = (Math.random() - 0.5) * 1;
+                this.pulse = 0;
+                this.pulseSpeed = 0.1 + Math.random() * 0.05;
+                break;
+                
+            case 'star':
+                this.color = options.color || '#FFD700';
+                this.size = Math.random() * 6 + 4;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.twinkle = Math.random() * Math.PI * 2;
+                this.twinkleSpeed = 0.15 + Math.random() * 0.1;
+                break;
         }
         
         this.fadeRate = options.fadeRate || 0.02;
@@ -180,6 +244,18 @@ class Particle {
         } else if (this.type === 'spark' && this.trail) {
             this.trail.push({x: this.x, y: this.y, alpha: this.life});
             if (this.trail.length > 5) this.trail.shift();
+        } else if (this.type === 'ember' && this.twinkle !== undefined) {
+            this.twinkle += this.twinkleSpeed;
+        } else if (this.type === 'leaf') {
+            this.time += this.swaySpeed;
+            this.velocity.x = Math.sin(this.time) * this.swayAmount;
+        } else if (this.type === 'heart' && this.pulse !== undefined) {
+            this.pulse += this.pulseSpeed;
+        } else if (this.type === 'star' && this.twinkle !== undefined) {
+            this.twinkle += this.twinkleSpeed;
+        } else if (this.type === 'steam') {
+            this.velocity.x += (Math.random() - 0.5) * 0.1; // Steam wobble
+            this.size += 0.1; // Steam expands
         }
         
         // Update rotation
@@ -264,6 +340,101 @@ class Particle {
                     ctx.arc(0, 0, this.size/2, 0, Math.PI * 2);
                     ctx.fill();
                 }
+                break;
+                
+            case 'water':
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+                
+            case 'steam':
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+                
+            case 'ember':
+                const twinkleAlpha = (Math.sin(this.twinkle) + 1) * 0.5;
+                ctx.globalAlpha = this.life * twinkleAlpha;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                break;
+                
+            case 'leaf':
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size/2, this.size, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Add leaf vein
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size);
+                ctx.lineTo(0, this.size);
+                ctx.stroke();
+                break;
+                
+            case 'snowflake':
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                // Draw snowflake pattern
+                for (let i = 0; i < 6; i++) {
+                    ctx.save();
+                    ctx.rotate((i * Math.PI) / 3);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.size);
+                    ctx.lineTo(0, this.size);
+                    ctx.moveTo(-this.size/2, -this.size/2);
+                    ctx.lineTo(this.size/2, this.size/2);
+                    ctx.moveTo(this.size/2, -this.size/2);
+                    ctx.lineTo(-this.size/2, this.size/2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                break;
+                
+            case 'heart':
+                const pulseSize = this.size * (1 + Math.sin(this.pulse) * 0.2);
+                ctx.translate(this.x, this.y);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, pulseSize/4);
+                ctx.bezierCurveTo(-pulseSize/2, -pulseSize/2, -pulseSize, -pulseSize/4, 0, pulseSize/2);
+                ctx.bezierCurveTo(pulseSize, -pulseSize/4, pulseSize/2, -pulseSize/2, 0, pulseSize/4);
+                ctx.fill();
+                break;
+                
+            case 'star':
+                const twinkleSize = this.size * (1 + Math.sin(this.twinkle) * 0.3);
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i / 10) * Math.PI * 2;
+                    const radius = i % 2 ? twinkleSize : twinkleSize * 0.4;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 0;
                 break;
         }
         

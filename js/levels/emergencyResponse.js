@@ -42,6 +42,15 @@ class EmergencyResponseLevel {
     }
 
     start() {
+        // Reset game state
+        this.currentStage = 0;
+        this.selectedLocation = null;
+        this.callsHandled = 0;
+        this.phone.isRinging = true;
+        this.phone.ringTimer = 0;
+        this.dispatcher.visible = false;
+        this.map.visible = false;
+        
         this.resizeCanvas();
         this.setupPositions();
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -129,7 +138,7 @@ Ready for the next emergency!`;
     gameLoop() {
         this.update();
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        window.emergencyResponseAnimationId = requestAnimationFrame(() => this.gameLoop());
     }
     
     update() {

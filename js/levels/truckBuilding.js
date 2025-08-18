@@ -334,7 +334,7 @@ class TruckBuildingGame {
         this.particles.update();
         this.particles.draw(this.ctx);
         
-        requestAnimationFrame(() => this.gameLoop());
+        window.truckBuildingAnimationId = requestAnimationFrame(() => this.gameLoop());
     }
     
     resizeCanvas() {

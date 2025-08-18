@@ -173,7 +173,7 @@ class StationMorningGame {
         this.particles.update();
         this.particles.draw(this.ctx);
         
-        requestAnimationFrame(() => this.gameLoop());
+        window.stationMorningAnimationId = requestAnimationFrame(() => this.gameLoop());
     }
     
     drawStationElements() {
