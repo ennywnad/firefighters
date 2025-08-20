@@ -38,28 +38,28 @@ class TruckBuildingGame {
                 id: 'engine',
                 name: 'Fire Engine',
                 description: 'Classic fire truck',
-                x: 50, y: 200, width: 100, height: 80,
+                x: 50, y: 220, width: 100, height: 60,
                 color: '#e74c3c',
                 icon: '🚒',
-                dragOriginalPos: { x: 50, y: 200 }
+                dragOriginalPos: { x: 50, y: 220 }
             },
             {
                 id: 'ladder',
                 name: 'Ladder Truck', 
                 description: 'Extended ladder truck',
-                x: 200, y: 200, width: 120, height: 80,
+                x: 200, y: 220, width: 120, height: 60,
                 color: '#f39c12',
                 icon: '🚚',
-                dragOriginalPos: { x: 200, y: 200 }
+                dragOriginalPos: { x: 200, y: 220 }
             },
             {
                 id: 'rescue',
                 name: 'Rescue Unit',
                 description: 'Heavy rescue vehicle',
-                x: 350, y: 200, width: 110, height: 85,
+                x: 370, y: 220, width: 100, height: 60,
                 color: '#8e44ad',
                 icon: '🚛',
-                dragOriginalPos: { x: 350, y: 200 }
+                dragOriginalPos: { x: 370, y: 220 }
             }
         ];
         
@@ -68,53 +68,53 @@ class TruckBuildingGame {
             {
                 id: 'wheels',
                 name: 'Wheels',
-                x: 50, y: 350, width: 30, height: 30,
+                x: 50, y: 400, width: 30, height: 30,
                 color: '#2c3e50',
                 icon: '⚫',
-                dragOriginalPos: { x: 50, y: 350 },
+                dragOriginalPos: { x: 50, y: 400 },
                 attachable: true
             },
             {
                 id: 'hose',
                 name: 'Fire Hose',
-                x: 120, y: 350, width: 40, height: 25,
+                x: 120, y: 400, width: 40, height: 25,
                 color: '#e74c3c',
                 icon: '🔥',
-                dragOriginalPos: { x: 120, y: 350 },
+                dragOriginalPos: { x: 120, y: 400 },
                 attachable: true
             },
             {
                 id: 'ladder-extend',
                 name: 'Extension Ladder',
-                x: 200, y: 350, width: 60, height: 15,
+                x: 210, y: 400, width: 60, height: 15,
                 color: '#f39c12',
                 icon: '🪜',
-                dragOriginalPos: { x: 200, y: 350 },
+                dragOriginalPos: { x: 210, y: 400 },
                 attachable: true
             },
             {
                 id: 'water-tank',
                 name: 'Water Tank',
-                x: 300, y: 350, width: 50, height: 35,
+                x: 310, y: 400, width: 50, height: 35,
                 color: '#3498db',
                 icon: '💧',
-                dragOriginalPos: { x: 300, y: 350 },
+                dragOriginalPos: { x: 310, y: 400 },
                 attachable: true
             },
             {
                 id: 'rescue-tools',
                 name: 'Rescue Tools',
-                x: 380, y: 350, width: 45, height: 30,
+                x: 400, y: 400, width: 45, height: 30,
                 color: '#95a5a6',
                 icon: '🔧',
-                dragOriginalPos: { x: 380, y: 350 },
+                dragOriginalPos: { x: 400, y: 400 },
                 attachable: true
             }
         ];
         
         // Build area (drop zone)
         this.buildArea = {
-            x: 250, y: 50, width: 300, height: 120,
+            x: 520, y: 200, width: 260, height: 140,
             occupied: false,
             chassis: null,
             attachedModules: []
@@ -194,8 +194,8 @@ class TruckBuildingGame {
                 // Chassis dropped in build area
                 if (!this.selectedChassis) {
                     this.selectedChassis = { ...this.draggedModule };
-                    this.selectedChassis.x = this.buildArea.x + 50;
-                    this.selectedChassis.y = this.buildArea.y + 20;
+                    this.selectedChassis.x = this.buildArea.x + 30;
+                    this.selectedChassis.y = this.buildArea.y + 40;
                     this.gamePhase = 'BUILD_TRUCK';
                     this.instructionText.textContent = 'Great! Now drag modules to customize your fire truck!';
                     this.successSynth.triggerAttackRelease('G4', '4n');
@@ -360,16 +360,16 @@ class TruckBuildingGame {
     drawModularInterface() {
         // Draw chassis selection area
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fillRect(20, 180, 480, 120);
+        this.ctx.fillRect(20, 200, 480, 120);
         this.ctx.strokeStyle = '#34495e';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(20, 180, 480, 120);
+        this.ctx.strokeRect(20, 200, 480, 120);
         
         // Title for chassis selection
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 24px Arial';
+        this.ctx.font = 'bold 22px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText('Choose Your Fire Truck:', 30, 170);
+        this.ctx.fillText('Choose Your Fire Truck:', 30, 190);
         
         // Draw chassis options
         this.chassisOptions.forEach(chassis => {
@@ -378,15 +378,15 @@ class TruckBuildingGame {
         
         // Draw modules area
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fillRect(20, 320, 480, 100);
+        this.ctx.fillRect(20, 380, 480, 100);
         this.ctx.strokeStyle = '#34495e';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(20, 320, 480, 100);
+        this.ctx.strokeRect(20, 380, 480, 100);
         
         // Title for modules
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 20px Arial';
-        this.ctx.fillText('Equipment & Tools:', 30, 315);
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.fillText('Equipment & Tools:', 30, 370);
         
         // Draw available modules
         this.availableModules.forEach(module => {
@@ -430,13 +430,13 @@ class TruckBuildingGame {
         
         // Draw name and description
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 16px Arial';
+        this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(chassis.name, chassis.x + chassis.width/2, chassis.y + chassis.height + 25);
+        this.ctx.fillText(chassis.name, chassis.x + chassis.width/2, chassis.y + chassis.height + 20);
         
-        this.ctx.font = '12px Arial';
+        this.ctx.font = '10px Arial';
         this.ctx.fillStyle = '#7f8c8d';
-        this.ctx.fillText(chassis.description, chassis.x + chassis.width/2, chassis.y + chassis.height + 40);
+        this.ctx.fillText(chassis.description, chassis.x + chassis.width/2, chassis.y + chassis.height + 32);
         
         // Highlight if dragging
         if (this.draggedModule === chassis) {
@@ -464,8 +464,8 @@ class TruckBuildingGame {
         
         // Draw name
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.fillText(module.name, module.x + module.width/2, module.y + module.height + 15);
+        this.ctx.font = 'bold 11px Arial';
+        this.ctx.fillText(module.name, module.x + module.width/2, module.y + module.height + 12);
         
         // Highlight if dragging
         if (this.draggedModule === module) {
