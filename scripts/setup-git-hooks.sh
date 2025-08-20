@@ -163,7 +163,7 @@ if echo "$STAGED_FILES" | grep -q "js/\|index\.html"; then
     done
     
     # Check level files
-    level_files=("js/levels/stationMorning.js" "js/levels/fireRescue.js" "js/levels/animalRescue.js" "js/levels/truckBuilding.js" "js/levels/emergencyResponse.js")
+    level_files=("js/levels/stationMorning.js" "js/levels/fireRescue2.js" "js/levels/animalRescue.js" "js/levels/truckBuilding.js" "js/levels/emergencyResponse.js")
     for level_file in "${level_files[@]}"; do
         if [ ! -f "$level_file" ]; then
             warning "Level file missing: $level_file"
@@ -213,7 +213,7 @@ while read local_ref local_sha remote_ref remote_sha; do
         echo -e "${YELLOW}⚠${NC} Pushing to main branch - running additional checks..."
         
         # Ensure all level files are present
-        level_files=("js/levels/stationMorning.js" "js/levels/fireRescue.js" "js/levels/animalRescue.js" "js/levels/truckBuilding.js" "js/levels/emergencyResponse.js")
+        level_files=("js/levels/stationMorning.js" "js/levels/fireRescue2.js" "js/levels/animalRescue.js" "js/levels/truckBuilding.js" "js/levels/emergencyResponse.js")
         for level_file in "${level_files[@]}"; do
             if [ ! -f "$level_file" ]; then
                 echo -e "${RED}❌ Critical level file missing: $level_file${NC}"

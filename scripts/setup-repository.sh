@@ -108,7 +108,7 @@ done
 # Check level files
 level_files=(
     "js/levels/stationMorning.js"
-    "js/levels/fireRescue.js"
+    "js/levels/fireRescue2.js"
     "js/levels/animalRescue.js"
     "js/levels/truckBuilding.js"
     "js/levels/emergencyResponse.js"
