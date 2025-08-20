@@ -32,97 +32,89 @@ class TruckBuildingGame {
     }
     
     initializeModularSystem() {
-        // Truck chassis options (base modules)
-        this.chassisOptions = [
-            {
-                id: 'engine',
-                name: 'Fire Engine',
-                description: 'Classic fire truck',
-                x: 50, y: 220, width: 100, height: 60,
-                color: '#e74c3c',
-                icon: '🚒',
-                dragOriginalPos: { x: 50, y: 220 }
-            },
-            {
-                id: 'ladder',
-                name: 'Ladder Truck', 
-                description: 'Extended ladder truck',
-                x: 200, y: 220, width: 120, height: 60,
-                color: '#f39c12',
-                icon: '🚚',
-                dragOriginalPos: { x: 200, y: 220 }
-            },
-            {
-                id: 'rescue',
-                name: 'Rescue Unit',
-                description: 'Heavy rescue vehicle',
-                x: 370, y: 220, width: 100, height: 60,
-                color: '#8e44ad',
-                icon: '🚛',
-                dragOriginalPos: { x: 370, y: 220 }
-            }
-        ];
+        // Base fire truck (always present)
+        this.baseTruck = {
+            x: 350, y: 280, 
+            width: 200, height: 80,
+            color: '#e74c3c'
+        };
         
-        // Available modules to add to trucks
-        this.availableModules = [
+        // Equipment modules that layer on top
+        this.availableEquipment = [
             {
                 id: 'wheels',
                 name: 'Wheels',
-                x: 50, y: 400, width: 30, height: 30,
+                x: 50, y: 450, width: 60, height: 40,
                 color: '#2c3e50',
-                icon: '⚫',
-                dragOriginalPos: { x: 50, y: 400 },
-                attachable: true
+                icon: '⚫⚫',
+                dragOriginalPos: { x: 50, y: 450 },
+                attachmentType: 'wheels',
+                required: true
             },
             {
-                id: 'hose',
-                name: 'Fire Hose',
-                x: 120, y: 400, width: 40, height: 25,
-                color: '#e74c3c',
-                icon: '🔥',
-                dragOriginalPos: { x: 120, y: 400 },
-                attachable: true
-            },
-            {
-                id: 'ladder-extend',
-                name: 'Extension Ladder',
-                x: 210, y: 400, width: 60, height: 15,
+                id: 'big-ladder',
+                name: 'Ladder Tower',
+                x: 150, y: 450, width: 80, height: 40,
                 color: '#f39c12',
                 icon: '🪜',
-                dragOriginalPos: { x: 210, y: 400 },
-                attachable: true
+                dragOriginalPos: { x: 150, y: 450 },
+                attachmentType: 'top',
+                description: 'For ladder trucks'
+            },
+            {
+                id: 'side-ladders',
+                name: 'Side Ladders',
+                x: 270, y: 450, width: 70, height: 40,
+                color: '#f39c12',
+                icon: '🪜🪜',
+                dragOriginalPos: { x: 270, y: 450 },
+                attachmentType: 'sides',
+                description: 'For engine trucks'
+            },
+            {
+                id: 'rear-cab',
+                name: 'Rear Cab',
+                x: 380, y: 450, width: 70, height: 40,
+                color: '#3498db',
+                icon: '🏠',
+                dragOriginalPos: { x: 380, y: 450 },
+                attachmentType: 'rear',
+                description: 'Command center'
             },
             {
                 id: 'water-tank',
                 name: 'Water Tank',
-                x: 310, y: 400, width: 50, height: 35,
+                x: 490, y: 450, width: 70, height: 40,
                 color: '#3498db',
                 icon: '💧',
-                dragOriginalPos: { x: 310, y: 400 },
-                attachable: true
+                dragOriginalPos: { x: 490, y: 450 },
+                attachmentType: 'tank',
+                description: 'Water storage'
             },
             {
-                id: 'rescue-tools',
-                name: 'Rescue Tools',
-                x: 400, y: 400, width: 45, height: 30,
+                id: 'rescue-compartment',
+                name: 'Rescue Gear',
+                x: 600, y: 450, width: 70, height: 40,
                 color: '#95a5a6',
                 icon: '🔧',
-                dragOriginalPos: { x: 400, y: 400 },
-                attachable: true
+                dragOriginalPos: { x: 600, y: 450 },
+                attachmentType: 'compartment',
+                description: 'Tools & equipment'
             }
         ];
         
-        // Build area (drop zone)
-        this.buildArea = {
-            x: 520, y: 200, width: 260, height: 140,
-            occupied: false,
-            chassis: null,
-            attachedModules: []
+        // Attached equipment tracking
+        this.attachedEquipment = {
+            wheels: null,
+            top: null,
+            sides: null,
+            rear: null,
+            tank: null,
+            compartment: null
         };
         
-        // Current selected chassis and attached modules
-        this.selectedChassis = null;
-        this.attachedModules = [];
+        // Game requires wheels to complete
+        this.gamePhase = 'BUILDING'; // BUILDING, COMPLETE
     }
     
     // New drag and drop event handlers
@@ -160,26 +152,14 @@ class TruckBuildingGame {
     }
     
     startDrag(x, y) {
-        // Check chassis options first
-        for (let chassis of this.chassisOptions) {
-            if (this.isPointInRect(x, y, chassis)) {
-                this.draggedModule = chassis;
+        // Check available equipment
+        for (let equipment of this.availableEquipment) {
+            if (this.isPointInRect(x, y, equipment)) {
+                this.draggedModule = equipment;
                 this.isDragging = true;
-                this.dragOffset.x = x - chassis.x;
-                this.dragOffset.y = y - chassis.y;
+                this.dragOffset.x = x - equipment.x;
+                this.dragOffset.y = y - equipment.y;
                 this.clickSynth.triggerAttackRelease('C4', '8n');
-                return;
-            }
-        }
-        
-        // Check available modules
-        for (let module of this.availableModules) {
-            if (this.isPointInRect(x, y, module)) {
-                this.draggedModule = module;
-                this.isDragging = true;
-                this.dragOffset.x = x - module.x;
-                this.dragOffset.y = y - module.y;
-                this.clickSynth.triggerAttackRelease('E4', '8n');
                 return;
             }
         }
@@ -188,29 +168,11 @@ class TruckBuildingGame {
     endDrag() {
         if (!this.draggedModule) return;
         
-        // Check if dropped in build area
-        if (this.isModuleInBuildArea(this.draggedModule)) {
-            if (this.chassisOptions.includes(this.draggedModule)) {
-                // Chassis dropped in build area
-                if (!this.selectedChassis) {
-                    this.selectedChassis = { ...this.draggedModule };
-                    this.selectedChassis.x = this.buildArea.x + 30;
-                    this.selectedChassis.y = this.buildArea.y + 40;
-                    this.gamePhase = 'BUILD_TRUCK';
-                    this.instructionText.textContent = 'Great! Now drag modules to customize your fire truck!';
-                    this.successSynth.triggerAttackRelease('G4', '4n');
-                } else {
-                    // Already have chassis, return to original position
-                    this.returnToOriginalPosition(this.draggedModule);
-                }
-            } else if (this.availableModules.includes(this.draggedModule) && this.selectedChassis) {
-                // Module dropped on chassis
-                this.attachModule(this.draggedModule);
-            } else {
-                this.returnToOriginalPosition(this.draggedModule);
-            }
+        // Check if dropped on the fire truck
+        if (this.isDroppedOnTruck(this.draggedModule)) {
+            this.attachEquipment(this.draggedModule);
         } else {
-            // Not in build area, return to original position
+            // Not on truck, return to original position
             this.returnToOriginalPosition(this.draggedModule);
         }
         
@@ -218,18 +180,22 @@ class TruckBuildingGame {
         this.draggedModule = null;
     }
     
-    attachModule(module) {
-        // Create attached module
-        const attachedModule = { ...module };
-        attachedModule.x = this.selectedChassis.x + (this.attachedModules.length * 30) + 10;
-        attachedModule.y = this.selectedChassis.y - 20;
-        attachedModule.attached = true;
+    attachEquipment(equipment) {
+        const attachmentType = equipment.attachmentType;
         
-        this.attachedModules.push(attachedModule);
+        // Check if this attachment type is already filled
+        if (this.attachedEquipment[attachmentType]) {
+            // Already have this type, return to original position
+            this.returnToOriginalPosition(equipment);
+            return;
+        }
+        
+        // Attach the equipment
+        this.attachedEquipment[attachmentType] = { ...equipment };
         this.successSynth.triggerAttackRelease('A4', '4n');
         
         // Check if truck is complete (has wheels at minimum)
-        if (this.attachedModules.some(m => m.id === 'wheels')) {
+        if (this.attachedEquipment.wheels) {
             this.gamePhase = 'COMPLETE';
             this.instructionText.textContent = 'Amazing! Your fire truck is ready for action!';
             setTimeout(() => {
@@ -237,11 +203,11 @@ class TruckBuildingGame {
                 showHeroReport('Excellent work! You built an awesome fire truck!');
             }, 1000);
         } else {
-            this.instructionText.textContent = `Great! Add wheels to complete your ${this.selectedChassis.name}!`;
+            this.instructionText.textContent = 'Great! Add wheels to make your fire truck complete!';
         }
         
-        // Return original module to its position
-        this.returnToOriginalPosition(module);
+        // Return original equipment to its position
+        this.returnToOriginalPosition(equipment);
     }
     
     returnToOriginalPosition(module) {
@@ -250,16 +216,24 @@ class TruckBuildingGame {
         this.dropSound.triggerAttackRelease('F3', '8n');
     }
     
-    isModuleInBuildArea(module) {
-        const moduleCenter = {
-            x: module.x + module.width / 2,
-            y: module.y + module.height / 2
+    isDroppedOnTruck(equipment) {
+        const equipmentCenter = {
+            x: equipment.x + equipment.width / 2,
+            y: equipment.y + equipment.height / 2
         };
         
-        return moduleCenter.x >= this.buildArea.x && 
-               moduleCenter.x <= this.buildArea.x + this.buildArea.width &&
-               moduleCenter.y >= this.buildArea.y && 
-               moduleCenter.y <= this.buildArea.y + this.buildArea.height;
+        // Check if dropped on the truck area (with some margin)
+        const truckArea = {
+            x: this.baseTruck.x - 50,
+            y: this.baseTruck.y - 50,
+            width: this.baseTruck.width + 100,
+            height: this.baseTruck.height + 100
+        };
+        
+        return equipmentCenter.x >= truckArea.x && 
+               equipmentCenter.x <= truckArea.x + truckArea.width &&
+               equipmentCenter.y >= truckArea.y && 
+               equipmentCenter.y <= truckArea.y + truckArea.height;
     }
     
     isPointInRect(x, y, rect) {
@@ -333,7 +307,7 @@ class TruckBuildingGame {
         window.addEventListener('resize', () => this.resizeCanvas());
         this.setupDragAndDrop();
         
-        this.instructionText.textContent = 'Choose a fire truck type and drag it to the build area!';
+        this.instructionText.textContent = 'Drag equipment onto the fire truck to build it! Start with wheels!';
         this.gameLoop();
     }
     
@@ -358,199 +332,184 @@ class TruckBuildingGame {
     }
     
     drawModularInterface() {
-        // Draw chassis selection area
+        // Draw the base fire truck
+        this.drawBaseTruck();
+        
+        // Draw equipment selection area
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fillRect(20, 200, 480, 120);
+        this.ctx.fillRect(20, 420, 700, 100);
         this.ctx.strokeStyle = '#34495e';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(20, 200, 480, 120);
+        this.ctx.strokeRect(20, 420, 700, 100);
         
-        // Title for chassis selection
+        // Title for equipment
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 22px Arial';
+        this.ctx.font = 'bold 20px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText('Choose Your Fire Truck:', 30, 190);
+        this.ctx.fillText('Fire Truck Equipment - Drag to Add:', 30, 410);
         
-        // Draw chassis options
-        this.chassisOptions.forEach(chassis => {
-            this.drawChassisOption(chassis);
+        // Draw available equipment
+        this.availableEquipment.forEach(equipment => {
+            this.drawEquipment(equipment);
         });
         
-        // Draw modules area
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fillRect(20, 380, 480, 100);
-        this.ctx.strokeStyle = '#34495e';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(20, 380, 480, 100);
-        
-        // Title for modules
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.fillText('Equipment & Tools:', 30, 370);
-        
-        // Draw available modules
-        this.availableModules.forEach(module => {
-            this.drawModule(module);
-        });
-        
-        // Draw build area
-        this.drawBuildArea();
-        
-        // Draw current truck build if chassis is selected
-        if (this.selectedChassis) {
-            this.drawCurrentBuild();
-        }
+        // Draw attached equipment on the truck
+        this.drawAttachedEquipment();
     }
     
-    drawChassisOption(chassis) {
-        // Draw chassis body
-        this.ctx.fillStyle = chassis.color;
-        this.ctx.fillRect(chassis.x, chassis.y, chassis.width, chassis.height);
+    drawBaseTruck() {
+        const truck = this.baseTruck;
         
-        // Add gradient for depth
-        const gradient = this.ctx.createLinearGradient(chassis.x, chassis.y, chassis.x, chassis.y + chassis.height);
+        // Draw main truck body
+        this.ctx.fillStyle = truck.color;
+        this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
+        
+        // Add gradient for 3D effect
+        const gradient = this.ctx.createLinearGradient(truck.x, truck.y, truck.x, truck.y + truck.height);
         gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
         gradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
         this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(chassis.x, chassis.y, chassis.width, chassis.height);
+        this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
         
-        // Draw wheels
+        // Draw front cab
+        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillRect(truck.x + truck.width - 60, truck.y - 30, 55, 35);
+        
+        // Cab windows
+        this.ctx.fillStyle = '#87CEEB';
+        this.ctx.fillRect(truck.x + truck.width - 55, truck.y - 25, 20, 15);
+        this.ctx.fillRect(truck.x + truck.width - 30, truck.y - 25, 20, 15);
+        
+        // Equipment compartments on side
+        this.ctx.strokeStyle = '#34495e';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(truck.x + 10, truck.y + 10, 40, 30);
+        this.ctx.strokeRect(truck.x + 60, truck.y + 10, 40, 30);
+        this.ctx.strokeRect(truck.x + 110, truck.y + 10, 40, 30);
+        
+        // Drop zone highlight
+        this.ctx.strokeStyle = '#f39c12';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([8, 4]);
+        this.ctx.strokeRect(truck.x - 20, truck.y - 50, truck.width + 40, truck.height + 80);
+        this.ctx.setLineDash([]);
+        
+        // Instructions
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.beginPath();
-        this.ctx.arc(chassis.x + 20, chassis.y + chassis.height + 8, 8, 0, Math.PI * 2);
-        this.ctx.arc(chassis.x + chassis.width - 20, chassis.y + chassis.height + 8, 8, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Draw truck icon
-        this.ctx.font = '32px Arial';
+        this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(chassis.icon, chassis.x + chassis.width/2, chassis.y + chassis.height/2);
-        
-        // Draw name and description
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 14px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(chassis.name, chassis.x + chassis.width/2, chassis.y + chassis.height + 20);
-        
-        this.ctx.font = '10px Arial';
-        this.ctx.fillStyle = '#7f8c8d';
-        this.ctx.fillText(chassis.description, chassis.x + chassis.width/2, chassis.y + chassis.height + 32);
-        
-        // Highlight if dragging
-        if (this.draggedModule === chassis) {
-            this.ctx.strokeStyle = '#f39c12';
-            this.ctx.lineWidth = 4;
-            this.ctx.strokeRect(chassis.x - 2, chassis.y - 2, chassis.width + 4, chassis.height + 4);
-        }
+        this.ctx.fillText('Drag Equipment Here!', truck.x + truck.width/2, truck.y - 60);
     }
     
-    drawModule(module) {
-        // Draw module body
-        this.ctx.fillStyle = module.color;
-        this.ctx.fillRect(module.x, module.y, module.width, module.height);
+    drawEquipment(equipment) {
+        // Draw equipment module
+        this.ctx.fillStyle = equipment.color;
+        this.ctx.fillRect(equipment.x, equipment.y, equipment.width, equipment.height);
         
         // Add shine effect
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(module.x, module.y, module.width, module.height/3);
+        this.ctx.fillRect(equipment.x, equipment.y, equipment.width, equipment.height/3);
         
-        // Draw module icon
-        this.ctx.font = '20px Arial';
+        // Draw equipment icon
+        this.ctx.font = '24px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(module.icon, module.x + module.width/2, module.y + module.height/2);
+        this.ctx.fillText(equipment.icon, equipment.x + equipment.width/2, equipment.y + equipment.height/2);
         
         // Draw name
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 11px Arial';
-        this.ctx.fillText(module.name, module.x + module.width/2, module.y + module.height + 12);
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillText(equipment.name, equipment.x + equipment.width/2, equipment.y + equipment.height + 15);
+        
+        // Draw description if available
+        if (equipment.description) {
+            this.ctx.font = '9px Arial';
+            this.ctx.fillStyle = '#7f8c8d';
+            this.ctx.fillText(equipment.description, equipment.x + equipment.width/2, equipment.y + equipment.height + 27);
+        }
         
         // Highlight if dragging
-        if (this.draggedModule === module) {
+        if (this.draggedModule === equipment) {
             this.ctx.strokeStyle = '#e74c3c';
             this.ctx.lineWidth = 3;
-            this.ctx.strokeRect(module.x - 2, module.y - 2, module.width + 4, module.height + 4);
+            this.ctx.strokeRect(equipment.x - 2, equipment.y - 2, equipment.width + 4, equipment.height + 4);
+        }
+        
+        // Show if already attached
+        if (this.attachedEquipment[equipment.attachmentType]) {
+            this.ctx.fillStyle = 'rgba(46, 204, 113, 0.7)';
+            this.ctx.fillRect(equipment.x, equipment.y, equipment.width, equipment.height);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.fillText('✓', equipment.x + equipment.width/2, equipment.y + equipment.height/2);
         }
     }
     
-    drawBuildArea() {
-        // Draw build area background
-        this.ctx.fillStyle = this.selectedChassis ? 'rgba(46, 204, 113, 0.2)' : 'rgba(149, 165, 166, 0.2)';
-        this.ctx.fillRect(this.buildArea.x, this.buildArea.y, this.buildArea.width, this.buildArea.height);
+    drawAttachedEquipment() {
+        const truck = this.baseTruck;
         
-        // Draw border
-        this.ctx.strokeStyle = this.selectedChassis ? '#27ae60' : '#95a5a6';
-        this.ctx.lineWidth = 3;
-        this.ctx.setLineDash([10, 5]);
-        this.ctx.strokeRect(this.buildArea.x, this.buildArea.y, this.buildArea.width, this.buildArea.height);
-        this.ctx.setLineDash([]);
+        // Draw wheels (bottom)
+        if (this.attachedEquipment.wheels) {
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.beginPath();
+            this.ctx.arc(truck.x + 40, truck.y + truck.height + 15, 15, 0, Math.PI * 2);
+            this.ctx.arc(truck.x + 100, truck.y + truck.height + 15, 15, 0, Math.PI * 2);
+            this.ctx.arc(truck.x + 160, truck.y + truck.height + 15, 15, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
         
-        // Draw instructions
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        const instruction = this.selectedChassis ? 'Add Equipment Here!' : 'Drag Fire Truck Here!';
-        this.ctx.fillText(instruction, this.buildArea.x + this.buildArea.width/2, this.buildArea.y + this.buildArea.height/2);
-    }
-    
-    drawCurrentBuild() {
-        if (!this.selectedChassis) return;
+        // Draw big ladder on top
+        if (this.attachedEquipment.top) {
+            this.ctx.fillStyle = '#f39c12';
+            this.ctx.fillRect(truck.x + 20, truck.y - 30, truck.width - 80, 25);
+            // Ladder rungs
+            this.ctx.strokeStyle = '#e67e22';
+            this.ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const x = truck.x + 30 + (i * 15);
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, truck.y - 28);
+                this.ctx.lineTo(x, truck.y - 7);
+                this.ctx.stroke();
+            }
+        }
         
-        // Draw the selected chassis in build area
-        this.drawChassisInBuild(this.selectedChassis);
+        // Draw side ladders
+        if (this.attachedEquipment.sides) {
+            this.ctx.fillStyle = '#f39c12';
+            // Left side ladder
+            this.ctx.fillRect(truck.x - 15, truck.y + 20, 12, 40);
+            // Right side ladder
+            this.ctx.fillRect(truck.x + truck.width + 3, truck.y + 20, 12, 40);
+        }
         
-        // Draw attached modules
-        this.attachedModules.forEach(module => {
-            this.drawAttachedModule(module);
-        });
-    }
-    
-    drawChassisInBuild(chassis) {
-        // Draw chassis body in build area
-        this.ctx.fillStyle = chassis.color;
-        this.ctx.fillRect(chassis.x, chassis.y, chassis.width, chassis.height);
+        // Draw rear cab
+        if (this.attachedEquipment.rear) {
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.fillRect(truck.x - 40, truck.y - 10, 35, 50);
+            // Windows
+            this.ctx.fillStyle = '#87CEEB';
+            this.ctx.fillRect(truck.x - 35, truck.y, 10, 15);
+            this.ctx.fillRect(truck.x - 20, truck.y, 10, 15);
+        }
         
-        // Add gradient
-        const gradient = this.ctx.createLinearGradient(chassis.x, chassis.y, chassis.x, chassis.y + chassis.height);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(chassis.x, chassis.y, chassis.width, chassis.height);
+        // Draw water tank (on top, behind cab)
+        if (this.attachedEquipment.tank) {
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.fillRect(truck.x + 10, truck.y - 25, 60, 20);
+            // Tank details
+            this.ctx.strokeStyle = '#2980b9';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(truck.x + 10, truck.y - 25, 60, 20);
+        }
         
-        // Draw wheels
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.beginPath();
-        this.ctx.arc(chassis.x + 25, chassis.y + chassis.height + 10, 10, 0, Math.PI * 2);
-        this.ctx.arc(chassis.x + chassis.width - 25, chassis.y + chassis.height + 10, 10, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Draw truck cab
-        this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(chassis.x + chassis.width - 40, chassis.y - 25, 35, 25);
-        
-        // Cab window
-        this.ctx.fillStyle = '#87CEEB';
-        this.ctx.fillRect(chassis.x + chassis.width - 38, chassis.y - 23, 31, 15);
-    }
-    
-    drawAttachedModule(module) {
-        // Draw module on the truck
-        this.ctx.fillStyle = module.color;
-        this.ctx.fillRect(module.x, module.y, module.width, module.height);
-        
-        // Add shine
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        this.ctx.fillRect(module.x, module.y, module.width, module.height/2);
-        
-        // Draw icon
-        this.ctx.font = '16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(module.icon, module.x + module.width/2, module.y + module.height/2);
+        // Draw rescue compartment (side panels)
+        if (this.attachedEquipment.compartment) {
+            this.ctx.fillStyle = '#95a5a6';
+            this.ctx.fillRect(truck.x + 5, truck.y + 45, 50, 15);
+            this.ctx.fillRect(truck.x + 145, truck.y + 45, 50, 15);
+        }
     }
     
     resizeCanvas() {
