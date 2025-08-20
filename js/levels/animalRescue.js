@@ -130,24 +130,11 @@ class AnimalRescueLevel {
                 y: this.canvas ? this.canvas.height - 120 : 400
             },
             draw: function(ctx, gameState) {
-                // Draw truck body
-                ctx.fillStyle = '#e74c3c';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                // Draw truck details
-                ctx.fillStyle = '#c0392b';
-                ctx.fillRect(this.x + 10, this.y + 10, 20, 15);
-                ctx.fillRect(this.x + 40, this.y + 10, 60, 15);
-                
-                // Draw wheels
-                ctx.fillStyle = '#2c3e50';
-                ctx.beginPath();
-                ctx.arc(this.x + 20, this.y + this.height + 10, 12, 0, Math.PI * 2);
-                ctx.arc(this.x + this.width - 20, this.y + this.height + 10, 12, 0, Math.PI * 2);
-                ctx.fill();
+                // Note: Truck body is now drawn by drawTruck() method
+                // This method only draws interactive buttons
                 
                 // Draw cone button
-                if (gameState === 'START') {
+                if (gameState === 'TRUCK_POSITIONED') {
                     ctx.fillStyle = '#f39c12';
                     ctx.beginPath();
                     ctx.arc(this.coneButton.x, this.coneButton.y, this.coneButton.radius, 0, Math.PI * 2);
