@@ -15,18 +15,18 @@ Simply open `index.html` in your browser to start playing! No installation requi
 ### Complete Game Experience - 5 Levels!
 
 #### 🔥 **Level 1: Fire Rescue**
-- Enhanced version with improved mechanics
 - Connect hoses step-by-step
 - Spray water to save buildings
 - Learn cause and effect through interactive gameplay
 
 #### 🐱 **Level 2: Animal Rescue**  
 - Deploy safety equipment
-- Extend ladders with realistic physics
+- Drop cones, Extend ladders 
 - Save adorable animals from trees
 
 #### 🔧 **Level 3: Truck Building**
 - Interactive truck preparation with animated tools
+- Build truck in block modules to make the fire truck you want.
 - Open toolbox and select the right tools
 - Tighten bolts, install equipment
 - Experience satisfying tool animations
@@ -49,7 +49,6 @@ Simply open `index.html` in your browser to start playing! No installation requi
 - 🌈 **Scene Variations** - Day, Night, Autumn, and Winter themes
 - 🏆 **Hero's Report** - Positive reinforcement after each level
 - 👆 **Touch Support** - Works on tablets and phones
-- 🔓 **Level Progression** - Unlock levels as you complete them
 - 🎨 **Particle Effects** - Beautiful animations and visual feedback
 - 🎮 **Modern Architecture** - Built with ES6 classes for smooth gameplay
 

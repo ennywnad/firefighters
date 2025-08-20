@@ -40,64 +40,69 @@ class TruckBuildingGame {
         };
         
         // Equipment modules that layer on top
+        const moduleWidth = 90;
+        const moduleHeight = 60;
+        const startX = 40;
+        const spacing = 20;
+
         this.availableEquipment = [
             {
                 id: 'wheels',
                 name: 'Wheels',
-                x: 50, y: 450, width: 60, height: 40,
+                x: startX, y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#2c3e50',
                 icon: '⚫⚫',
-                dragOriginalPos: { x: 50, y: 450 },
+                dragOriginalPos: { x: startX, y: 450 },
                 attachmentType: 'wheels',
                 required: true
             },
             {
                 id: 'big-ladder',
                 name: 'Ladder Tower',
-                x: 150, y: 450, width: 80, height: 40,
+                x: startX + moduleWidth + spacing, y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#f39c12',
                 icon: '🪜',
-                dragOriginalPos: { x: 150, y: 450 },
+                dragOriginalPos: { x: startX + moduleWidth + spacing, y: 450 },
                 attachmentType: 'top',
                 description: 'For ladder trucks'
             },
             {
                 id: 'side-ladders',
                 name: 'Side Ladders',
-                x: 270, y: 450, width: 70, height: 40,
+                x: startX + 2 * (moduleWidth + spacing), y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#f39c12',
                 icon: '🪜🪜',
-                dragOriginalPos: { x: 270, y: 450 },
+                dragOriginalPos: { x: startX + 2 * (moduleWidth + spacing), y: 450 },
                 attachmentType: 'sides',
                 description: 'For engine trucks'
             },
             {
                 id: 'rear-cab',
                 name: 'Rear Cab',
-                x: 380, y: 450, width: 70, height: 40,
+                x: startX + 3 * (moduleWidth + spacing), y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#3498db',
                 icon: '🏠',
-                dragOriginalPos: { x: 380, y: 450 },
+                dragOriginalPos: { x: startX + 3 * (moduleWidth + spacing), y: 450 },
                 attachmentType: 'rear',
                 description: 'Command center'
             },
             {
                 id: 'water-tank',
                 name: 'Water Tank',
-                x: 490, y: 450, width: 70, height: 40,
+                x: startX + 4 * (moduleWidth + spacing), y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#3498db',
                 icon: '💧',
-                dragOriginalPos: { x: 490, y: 450 },
+                dragOriginalPos: { x: startX + 4 * (moduleWidth + spacing), y: 450 },
                 attachmentType: 'tank',
                 description: 'Water storage'
             },
             {
                 id: 'rescue-compartment',
                 name: 'Rescue Gear',
-                x: 600, y: 450, width: 70, height: 40,
+                x: startX + 5 * (moduleWidth + spacing), y: 450, width: moduleWidth, height: moduleHeight,
                 color: '#95a5a6',
                 icon: '🔧',
-                dragOriginalPos: { x: 600, y: 450 },
+                dragOriginalPos: { x: startX + 5 * (moduleWidth + spacing), y: 450 },
                 attachmentType: 'compartment',
                 description: 'Tools & equipment'
             }
@@ -194,6 +199,33 @@ class TruckBuildingGame {
         this.attachedEquipment[attachmentType] = { ...equipment };
         this.successSynth.triggerAttackRelease('A4', '4n');
         
+        // Add particle effect at attachment point
+        const truck = this.baseTruck;
+        let particlePos = { x: truck.x + truck.width / 2, y: truck.y + truck.height / 2 }; // Default center
+
+        switch (attachmentType) {
+            case 'wheels':
+                particlePos = { x: truck.x + truck.width / 2, y: truck.y + truck.height + 15 };
+                break;
+            case 'top':
+                particlePos = { x: truck.x + (truck.width - 80) / 2, y: truck.y - 15 };
+                break;
+            case 'sides':
+                particlePos = { x: truck.x, y: truck.y + 40 };
+                break;
+            case 'rear':
+                particlePos = { x: truck.x - 20, y: truck.y + 15 };
+                break;
+            case 'tank':
+                particlePos = { x: truck.x + 40, y: truck.y - 15 };
+                break;
+            case 'compartment':
+                particlePos = { x: truck.x + truck.width / 2, y: truck.y + 50 };
+                break;
+        }
+
+        this.particles.createExplosion(particlePos.x, particlePos.y, equipment.color, 30);
+
         // Check if truck is complete (has wheels at minimum)
         if (this.attachedEquipment.wheels) {
             this.gamePhase = 'COMPLETE';
@@ -408,10 +440,10 @@ class TruckBuildingGame {
         
         // Add shine effect
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(equipment.x, equipment.y, equipment.width, equipment.height/3);
+        this.ctx.fillRect(equipment.x + 5, equipment.y + 5, equipment.width - 10, (equipment.height/3) - 5);
         
         // Draw equipment icon
-        this.ctx.font = '24px Arial';
+        this.ctx.font = '36px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillStyle = '#fff';
@@ -419,20 +451,20 @@ class TruckBuildingGame {
         
         // Draw name
         this.ctx.fillStyle = '#2c3e50';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.fillText(equipment.name, equipment.x + equipment.width/2, equipment.y + equipment.height + 15);
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.fillText(equipment.name, equipment.x + equipment.width/2, equipment.y + equipment.height + 20);
         
         // Draw description if available
         if (equipment.description) {
-            this.ctx.font = '9px Arial';
+            this.ctx.font = '12px Arial';
             this.ctx.fillStyle = '#7f8c8d';
-            this.ctx.fillText(equipment.description, equipment.x + equipment.width/2, equipment.y + equipment.height + 27);
+            this.ctx.fillText(equipment.description, equipment.x + equipment.width/2, equipment.y + equipment.height + 38);
         }
         
         // Highlight if dragging
         if (this.draggedModule === equipment) {
             this.ctx.strokeStyle = '#e74c3c';
-            this.ctx.lineWidth = 3;
+            this.ctx.lineWidth = 4;
             this.ctx.strokeRect(equipment.x - 2, equipment.y - 2, equipment.width + 4, equipment.height + 4);
         }
         
@@ -441,7 +473,7 @@ class TruckBuildingGame {
             this.ctx.fillStyle = 'rgba(46, 204, 113, 0.7)';
             this.ctx.fillRect(equipment.x, equipment.y, equipment.width, equipment.height);
             this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 16px Arial';
+            this.ctx.font = 'bold 24px Arial';
             this.ctx.fillText('✓', equipment.x + equipment.width/2, equipment.y + equipment.height/2);
         }
     }

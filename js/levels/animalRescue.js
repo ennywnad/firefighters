@@ -4,7 +4,6 @@ class AnimalRescueLevel {
         this.gameScreen = gameScreen;
         this.ctx = canvas.getContext('2d');
         this.instructionText = gameScreen.querySelector('.instructions');
-        this.animalMenu = document.getElementById('animal-select-menu');
 
         this.mouse = { x: 0, y: 0 };
         this.gameState = 'TRUCK_POSITIONING';
@@ -36,13 +35,16 @@ class AnimalRescueLevel {
         this.tree = this.createTreeObject();
         this.fireTruckRescue = this.createFireTruckObject();
 
-        this.initEventListeners();
+        this.isDragging = false;
+        this.canvas.addEventListener('mousedown', (e) => this.handleInteraction(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleInteraction(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleInteraction(e));
+        window.addEventListener('resize', () => this.resizeCanvas());
     }
 
     start() {
         this.gameState = 'TRUCK_POSITIONING';
         this.instructionText.textContent = `A ${this.selectedAnimal.type} needs help! Click to position the fire truck.`;
-        this.animalMenu.style.display = 'none'; // Hide the selection menu
         this.conePosition = null;
         this.firefighter = { x: 0, y: 0, progress: 0, hasAnimal: false };
         this.ladder.currentLength = 0;
@@ -52,21 +54,6 @@ class AnimalRescueLevel {
         sceneParticles = [];
         this.resizeCanvas();
         this.gameLoop();
-    }
-
-    initEventListeners() {
-        this.animalMenu.onclick = (e) => {
-            if (e.target.classList.contains('animal-option')) {
-                const animalType = e.target.dataset.animal;
-                if (animalType === 'kitty') this.selectedAnimal = { type: 'kitty', emoji: '🐱', sound: 'A5' };
-                if (animalType === 'bird') this.selectedAnimal = { type: 'bird', emoji: '🐦', sound: 'C6' };
-                if (animalType === 'squirrel') this.selectedAnimal = { type: 'squirrel', emoji: '🐿️', sound: 'E5' };
-                this.animalMenu.style.display = 'none';
-                this.startGame();
-            }
-        };
-        this.canvas.addEventListener('mousedown', (e) => this.handleInteraction(e));
-        window.addEventListener('resize', () => this.resizeCanvas());
     }
 
     startGame() {
@@ -188,29 +175,22 @@ class AnimalRescueLevel {
 
     handleInteraction(e) {
         const pos = { x: e.offsetX, y: e.offsetY };
-        if (e.type === 'mousedown') {
-            switch (this.gameState) {
-                case 'TRUCK_POSITIONING':
-                    // Click anywhere to start moving truck to optimal position
-                    this.truck.isMoving = true;
-                    this.truck.targetX = this.tree.x - 150; // Position truck near tree
-                    this.gameState = 'TRUCK_MOVING';
-                    this.instructionText.textContent = 'Moving fire truck into position...';
-                    this.truckSynth.triggerAttackRelease('C2', '2n');
-                    break;
-                    
-                case 'TRUCK_POSITIONED':
-                    // Click the cone button to deploy safety cone
+        switch (e.type) {
+            case 'mousedown':
+                if (this.gameState === 'TRUCK_POSITIONING') {
+                    if (pos.x >= this.truck.x && pos.x <= this.truck.x + this.truck.width &&
+                        pos.y >= this.truck.y && pos.y <= this.truck.y + this.truck.height) {
+                        this.isDragging = true;
+                        this.truck.isMoving = true; // For visual dust effect
+                    }
+                } else if (this.gameState === 'TRUCK_POSITIONED') {
                     if (Math.hypot(pos.x - this.fireTruckRescue.coneButton.x, pos.y - this.fireTruckRescue.coneButton.y) < this.fireTruckRescue.coneButton.radius) {
                         this.conePosition = { x: this.fireTruckRescue.x - 50, y: this.canvas.height - 40 };
                         this.gameState = 'CONE_PLACED';
                         this.instructionText.textContent = 'Safety cone deployed! Click to raise the ladder.';
                         this.actionSynth.triggerAttackRelease('C3', '8n');
                     }
-                    break;
-                    
-                case 'CONE_PLACED':
-                    // Click anywhere to start raising ladder
+                } else if (this.gameState === 'CONE_PLACED') {
                     this.ladder.isRaising = true;
                     this.ladder.startX = this.fireTruckRescue.x;
                     this.ladder.startY = this.fireTruckRescue.y;
@@ -223,58 +203,45 @@ class AnimalRescueLevel {
                     this.gameState = 'LADDER_RAISING';
                     this.instructionText.textContent = 'Raising ladder to rescue position...';
                     this.actionSynth.triggerAttackRelease('E3', '2n');
-                    break;
-                    
-                case 'LADDER_EXTENDED':
+                } else if (this.gameState === 'LADDER_EXTENDED') {
                     if (this.isClickOnLadder(pos)) {
                         this.gameState = 'CLIMBING';
                         this.instructionText.textContent = 'Climbing up to rescue the animal!';
                     }
-                    break;
-                    
-                case 'AT_ANIMAL':
+                } else if (this.gameState === 'AT_ANIMAL') {
                     if (Math.hypot(pos.x - this.animalPosition.x, pos.y - this.animalPosition.y) < 30) {
                         this.firefighter.hasAnimal = true;
                         this.gameState = 'DESCENDING';
                         this.instructionText.textContent = 'Safely carrying the animal down!';
                         this.actionSynth.triggerAttackRelease('G3', '8n');
                     }
-                    break;
-            }
+                }
+                break;
+            case 'mouseup':
+                this.isDragging = false;
+                this.truck.isMoving = false;
+                if (this.gameState === 'TRUCK_POSITIONING') {
+                    // Check if truck is in the right position
+                    if (this.truck.x > this.tree.x - 200 && this.truck.x < this.tree.x - 100) {
+                        this.gameState = 'TRUCK_POSITIONED';
+                        this.instructionText.textContent = 'Perfect position! Click the cone button to deploy safety equipment.';
+                        this.truckSynth.triggerAttackRelease('G2', '8n');
+                    }
+                }
+                break;
+            case 'mousemove':
+                if (this.isDragging) {
+                    this.truck.x = pos.x - this.truck.width / 2;
+                    // Update related components
+                    this.fireTruckRescue.x = this.truck.x;
+                    this.fireTruckRescue.coneButton.x = this.truck.x + 100;
+                    this.fireTruckRescue.ladderButton.x = this.truck.x + 70;
+                }
+                break;
         }
     }
 
     update() {
-        // Handle truck movement animation
-        if (this.gameState === 'TRUCK_MOVING') {
-            if (this.truck.isMoving) {
-                const dx = this.truck.targetX - this.truck.x;
-                if (Math.abs(dx) > this.truck.speed) {
-                    this.truck.x += Math.sign(dx) * this.truck.speed;
-                    // Update button positions during movement to keep them with the truck
-                    this.fireTruckRescue.x = this.truck.x;
-                    this.fireTruckRescue.y = this.truck.y;
-                    this.fireTruckRescue.coneButton.x = this.truck.x + 100;
-                    this.fireTruckRescue.coneButton.y = this.truck.y + 30;
-                    this.fireTruckRescue.ladderButton.x = this.truck.x + 70;
-                    this.fireTruckRescue.ladderButton.y = this.truck.y + 30;
-                } else {
-                    this.truck.x = this.truck.targetX;
-                    this.truck.isMoving = false;
-                    this.gameState = 'TRUCK_POSITIONED';
-                    this.instructionText.textContent = 'Perfect position! Click the cone button to deploy safety equipment.';
-                    // Update fire truck position for cone and ladder buttons
-                    this.fireTruckRescue.x = this.truck.x;
-                    this.fireTruckRescue.y = this.truck.y;
-                    // Update button positions to stay with the truck
-                    this.fireTruckRescue.coneButton.x = this.truck.x + 100;
-                    this.fireTruckRescue.coneButton.y = this.truck.y + 30;
-                    this.fireTruckRescue.ladderButton.x = this.truck.x + 70;
-                    this.fireTruckRescue.ladderButton.y = this.truck.y + 30;
-                }
-            }
-        }
-        
         // Handle ladder raising animation
         if (this.gameState === 'LADDER_RAISING') {
             if (this.ladder.currentLength < this.ladder.maxLength) {
@@ -437,6 +404,27 @@ class AnimalRescueLevel {
     }
 
     drawTruck() {
+        // Draw positioning highlight when in truck positioning state
+        if (this.gameState === 'TRUCK_POSITIONING') {
+            const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 10;
+            this.ctx.strokeStyle = 'rgba(241, 196, 15, 0.8)';
+            this.ctx.lineWidth = 3;
+            
+            // Highlight the truck itself
+            this.ctx.strokeRect(
+                this.truck.x - pulse/2, 
+                this.truck.y - pulse/2, 
+                this.truck.width + pulse, 
+                this.truck.height + pulse
+            );
+
+            // Draw the target drop zone
+            this.ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+            this.ctx.fillRect(this.tree.x - 200, this.truck.y, 100, this.truck.height);
+            this.ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+            this.ctx.strokeRect(this.tree.x - 200, this.truck.y, 100, this.truck.height);
+        }
+
         // Draw truck body
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
@@ -475,19 +463,6 @@ class AnimalRescueLevel {
                 );
                 this.ctx.fill();
             }
-        }
-        
-        // Draw positioning highlight when in truck positioning state
-        if (this.gameState === 'TRUCK_POSITIONING') {
-            const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 10;
-            this.ctx.strokeStyle = 'rgba(241, 196, 15, 0.8)';
-            this.ctx.lineWidth = 3;
-            this.ctx.strokeRect(
-                this.truck.x - pulse/2, 
-                this.truck.y - pulse/2, 
-                this.truck.width + pulse, 
-                this.truck.height + pulse
-            );
         }
     }
 

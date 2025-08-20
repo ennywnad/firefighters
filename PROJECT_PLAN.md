@@ -7,18 +7,17 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 
 ## 🎮 Game Levels Overview
 
-### ✅ Completed Levels
+### ✅ WIP Levels
 1. **Fire Rescue** - Connect hoses and spray water to put out fires
 2. **Animal Rescue** - Use ladder to rescue animals from trees
+   1. [x] Animal selection is now random. Implemented drag-and-drop truck positioning, cone placement, and ladder raising as distinct steps. 
 3. **Truck Building** - Interactive truck preparation with animated tools
+   1. [x] Implemented a drag-and-drop modular system. Enlarged module UI, text, and icons for better presentation. Added particle effects for feedback.  
 4. **Station Morning** - Start the day at the fire station
+   1. the presentation is terrible. the art, the mechanic of the pole slide. I like station morning if it was more like my sons morning getting up, dressed, breakfast and out to the fire station.  At a fire station.
 5. **Emergency Response** - Complete multi-stage rescue missions
+   1. this needs more steps or a rethink.  An ambulance to the scene level. Calling 911 and sharing where you are.  like your home address.  This could be a lesson for helping my son understand what to do in an emergency.
 
-### 🔓 Level Progression System
-- Sequential level unlocking based on completion
-- Progress tracking with localStorage
-- Debug mode for development testing
-- Reset progress functionality
 
 ---
 
@@ -26,21 +25,15 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 
 ### 🎨 Enhanced Game Polish
 * [ ] **Improved Animations:**
-  - Smoother tool interactions in Truck Building
+  - Smoother tool interactions in Truck Building. Build the truck type module parts that add the rear driver cab, a large ladder with a bucket and a nozel, smaller ladders for the side of an engine truck. 
   - Enhanced particle effects for all levels
   - Better character movement animations
   - Improved water spray physics in Fire Rescue
 
-### 📱 Mobile & Accessibility
-* [ ] **Touch Optimization:**
-  - Better touch targets for mobile devices
-  - Improved gesture recognition
-  - Responsive canvas scaling
-  - Haptic feedback integration
-
 ### 🎵 Audio Enhancements
 * [ ] **Expanded Sound Library:**
   - More varied sound effects per level
+  - More hose spraying sound effects
   - Ambient background sounds
   - Voice guidance for instructions
   - Dynamic music that responds to gameplay
@@ -52,10 +45,10 @@ An interactive browser game for toddlers featuring firefighting adventures with 
   - Progressive uncurling from coil to extended
   
 * [ ] **Advanced Tool Animations:**
-  - **Wrench**: Full rotation with torque effect
-  - **Axe**: Arc swing with wood chip particles
+  - **Wrench**: Full rotation with torque effect. Opening the fire hydrant valve
+  - **Axe**: Arc swing with wood chip particles. chop down doors
   - **Hammer**: Impact bounce with nail depression
-  - **Saw**: Back-forth motion with sawdust
+  - **Chain Saw**: Cut down branches
   
 * [ ] **Enhanced Character Movement:**
   - Walk cycle with 4-frame animation
@@ -68,22 +61,24 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 ## 🎯 Feature Roadmap
 
 ### High Priority
-* [ ] **Level Progression System:** Unlock levels sequentially
-* [ ] **Progress Tracking:** Stars/badges for completed levels
-* [ ] **Animation Library:** Reusable animation functions
-* [ ] **Mobile Optimization:** Better touch controls and responsive design
-* [ ] **Sound Effects Library:** Expand beyond Tone.js basics
+* [ ] **Tutorial Mode:** First-time player guidance
+* [ ] **Customization:** Let kids choose firefighter appearance
 
 ### Medium Priority
-* [ ] **Mini-Games:** Quick reflex games between levels
-* [ ] **Customization:** Let kids choose firefighter appearance
 * [ ] **Achievement System:** Special badges for actions
-* [ ] **Tutorial Mode:** First-time player guidance
+* [ ] **Progress Tracking:** Stars/badges for completed levels
+
+### low Priority
+* [ ] **Sound Effects Library:** Expand beyond Tone.js basics
+* [ ] **Mobile Optimization:** Better touch controls and responsive design
+* [ ] **Animation Library:** Reusable animation functions
+* [ ] **Mini-Games:** Quick reflex games between levels
 
 ### Future Ideas
+* [ ] **Power Wash** fire truck wash at the station
+* [ ] **Fire Rescue Boat** Seattle City fire boat fire rescue
 * [ ] **Helicopter Water Drop** level
-* [ ] **Forest Fire** level with strategy elements
-* [ ] **Rescue Boat** water rescue level
+* [ ] **Forest Fire** level with strategy elements - fire lookout spot fires and call in on your radio
 * [ ] **Community Helper** mode with other emergency services
 
 ---
@@ -105,6 +100,15 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 * [ ] Optimize canvas rendering with layers
 * [ ] Implement sprite sheets for complex animations
 * [ ] Add loading screen with progress bar
+
+
+### 📱 Mobile & Accessibility
+* [ ] **Touch Optimization:**
+  - Better touch targets for mobile devices
+  - Improved gesture recognition
+  - Responsive canvas scaling
+  - Haptic feedback integration
+
 
 ---
 
