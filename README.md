@@ -2,7 +2,7 @@
 
 **An interactive, educational browser game for toddlers featuring firefighting heroes!**
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
 [![Age](https://img.shields.io/badge/age-2--5%20years-orange.svg)]()
 
@@ -102,6 +102,9 @@ No build process required - it's that simple!
 
 ## 📝 Version History
 
+- **v1.2.0** - 🎮 **LEVEL ENHANCEMENTS**
+  - Animal Rescue: Implemented drag-and-drop truck positioning and added more interactive steps.
+  - Truck Building: Enlarged module UI and added particle effects for better feedback.
 - **v1.1.0** - 🔧 **WORKFLOW IMPROVEMENTS & POLISH**
   - Enhanced development workflow with CI/CD pipelines
   - Automated code validation and quality checks
