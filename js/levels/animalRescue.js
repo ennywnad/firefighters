@@ -77,11 +77,22 @@ class AnimalRescueLevel {
     }
 
     createTreeObject() {
+        // Generate fixed texture positions once
+        const textureSpots = [];
+        for (let i = 0; i < 5; i++) {
+            textureSpots.push({
+                offsetX: (Math.random() - 0.5) * 100,
+                offsetY: (Math.random() - 0.5) * 100,
+                radius: 10 + Math.random() * 20
+            });
+        }
+        
         return {
             x: this.canvas ? this.canvas.width - 150 : 650,
             y: this.canvas ? this.canvas.height - 300 : 300,
             width: 60,
             height: 220,
+            textureSpots: textureSpots,
             draw: function(ctx) {
                 // Draw tree trunk
                 ctx.fillStyle = currentScene.treeTrunk;
@@ -93,18 +104,18 @@ class AnimalRescueLevel {
                 ctx.arc(this.x + this.width/2, this.y + 60, 80, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Add some texture
+                // Add fixed texture spots
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-                for (let i = 0; i < 5; i++) {
+                this.textureSpots.forEach(spot => {
                     ctx.beginPath();
                     ctx.arc(
-                        this.x + this.width/2 + (Math.random() - 0.5) * 100,
-                        this.y + 60 + (Math.random() - 0.5) * 100,
-                        10 + Math.random() * 20,
+                        this.x + this.width/2 + spot.offsetX,
+                        this.y + 60 + spot.offsetY,
+                        spot.radius,
                         0, Math.PI * 2
                     );
                     ctx.fill();
-                }
+                });
             }
         };
     }
