@@ -251,14 +251,26 @@ class AnimalRescueLevel {
                 const dx = this.truck.targetX - this.truck.x;
                 if (Math.abs(dx) > this.truck.speed) {
                     this.truck.x += Math.sign(dx) * this.truck.speed;
+                    // Update button positions during movement to keep them with the truck
+                    this.fireTruckRescue.x = this.truck.x;
+                    this.fireTruckRescue.y = this.truck.y;
+                    this.fireTruckRescue.coneButton.x = this.truck.x + 100;
+                    this.fireTruckRescue.coneButton.y = this.truck.y + 30;
+                    this.fireTruckRescue.ladderButton.x = this.truck.x + 70;
+                    this.fireTruckRescue.ladderButton.y = this.truck.y + 30;
                 } else {
                     this.truck.x = this.truck.targetX;
                     this.truck.isMoving = false;
                     this.gameState = 'TRUCK_POSITIONED';
                     this.instructionText.textContent = 'Perfect position! Click the cone button to deploy safety equipment.';
                     // Update fire truck position for cone and ladder buttons
-                    this.fireTruckRescue.x = this.truck.x + this.truck.width / 2;
+                    this.fireTruckRescue.x = this.truck.x;
                     this.fireTruckRescue.y = this.truck.y;
+                    // Update button positions to stay with the truck
+                    this.fireTruckRescue.coneButton.x = this.truck.x + 100;
+                    this.fireTruckRescue.coneButton.y = this.truck.y + 30;
+                    this.fireTruckRescue.ladderButton.x = this.truck.x + 70;
+                    this.fireTruckRescue.ladderButton.y = this.truck.y + 30;
                 }
             }
         }
