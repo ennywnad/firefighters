@@ -1,0 +1,189 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Validate HTML syntax
+      run: |
+        # Check HTML files for basic syntax errors
+        find . -name "*.html" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+          echo "Validating $file"
+          # Basic HTML validation - check for unclosed tags
+          if ! python3 -c "
+        import sys
+        import re
+        content = open('$file').read()
+        # Remove comments and script/style content
+        content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
+        content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.DOTALL | re.IGNORECASE)
+        content = re.sub(r'<style[^>]*>.*?</style>', '', content, flags=re.DOTALL | re.IGNORECASE)
+        # Basic tag matching
+        tags = re.findall(r'<(/?)(\w+)', content)
+        stack = []
+        for closing, tag in tags:
+          if not closing and tag.lower() not in ['img', 'br', 'hr', 'input', 'meta', 'link']:
+            stack.append(tag.lower())
+          elif closing and stack and stack[-1] == tag.lower():
+            stack.pop()
+        if stack:
+          print(f'Unclosed tags: {stack}')
+          sys.exit(1)
+        "; then
+            echo "HTML validation failed for $file"
+            exit 1
+          fi
+        done
+        
+    - name: Validate JavaScript syntax
+      run: |
+        # Check JavaScript files for basic syntax errors
+        find . -name "*.js" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+          echo "Validating $file"
+          if ! node -c "$file"; then
+            echo "JavaScript syntax error in $file"
+            exit 1
+          fi
+        done
+        
+    - name: Check for ES6 class structure
+      run: |
+        # Ensure level files follow ES6 class pattern
+        find js/levels -name "*.js" | while read file; do
+          if ! grep -q "class.*extends GameLevel" "$file" && ! grep -q "class.*Level" "$file"; then
+            echo "Warning: $file may not follow ES6 class structure"
+          fi
+        done
+        
+    - name: Validate CSS syntax
+      run: |
+        # Basic CSS validation
+        find . -name "*.css" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+          echo "Validating $file"
+          # Check for unmatched braces
+          if ! python3 -c "
+        content = open('$file').read()
+        # Remove comments
+        import re
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        # Count braces
+        open_braces = content.count('{')
+        close_braces = content.count('}')
+        if open_braces != close_braces:
+          print(f'Unmatched braces: {open_braces} open, {close_braces} close')
+          exit(1)
+        "; then
+            echo "CSS validation failed for $file"
+            exit 1
+          fi
+        done
+        
+    - name: Check file structure
+      run: |
+        # Ensure required files exist
+        required_files=(
+          "index.html"
+          "js/main.js"
+          "css/style.css"
+          "README.md"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Required file missing: $file"
+            exit 1
+          fi
+        done
+        
+        # Check that all level files exist
+        level_files=(
+          "js/levels/stationMorning.js"
+          "js/levels/fireRescue.js"
+          "js/levels/animalRescue.js"
+          "js/levels/truckBuilding.js"
+          "js/levels/emergencyResponse.js"
+        )
+        
+        for file in "${level_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Level file missing: $file"
+            exit 1
+          fi
+        done
+        
+    - name: Check for TODOs and FIXMEs
+      run: |
+        # Report any TODOs or FIXMEs in the code
+        echo "Checking for TODOs and FIXMEs..."
+        grep -r -n -i "todo\|fixme" --include="*.js" --include="*.html" --include="*.css" . || true
+        
+    - name: Validate game level completeness
+      run: |
+        # Check that each level file has essential components
+        find js/levels -name "*.js" | while read file; do
+          echo "Checking level completeness: $file"
+          
+          # Check for required methods/properties
+          if ! grep -q "constructor\|init\|setup\|render\|handleClick" "$file"; then
+            echo "Warning: $file may be missing essential game methods"
+          fi
+          
+          # Check for level title
+          if ! grep -q "title\|name" "$file"; then
+            echo "Warning: $file may be missing level title"
+          fi
+        done
+        
+    - name: Check documentation updates
+      run: |
+        # Ensure documentation is current
+        if git diff --name-only HEAD~1 2>/dev/null | grep -q "\.js$\|\.html$\|\.css$"; then
+          echo "Code changes detected. Checking if documentation needs updates..."
+          
+          # Check if README was also updated
+          if ! git diff --name-only HEAD~1 2>/dev/null | grep -q "README.md"; then
+            echo "Notice: Code changes detected but README.md not updated. Consider updating documentation."
+          fi
+        fi || echo "No previous commit to compare against"
+        
+  accessibility-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check accessibility basics
+      run: |
+        # Check for alt text on images
+        echo "Checking for image alt attributes..."
+        if grep -n "<img" index.html | grep -v "alt="; then
+          echo "Warning: Images without alt attributes found"
+        fi
+        
+        # Check for semantic HTML
+        echo "Checking for semantic HTML structure..."
+        if ! grep -q "<main>\|<section>\|<nav>\|<header>" index.html; then
+          echo "Notice: Consider using semantic HTML elements for better accessibility"
+        fi
+        
+        # Check for button vs div clickables
+        echo "Checking for proper button usage..."
+        if grep -q "onclick.*div\|click.*div" js/*.js js/*/*.js; then
+          echo "Notice: Consider using button elements instead of divs for clickable elements"
+        fi
