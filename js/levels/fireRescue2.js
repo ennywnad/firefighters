@@ -40,17 +40,29 @@ class FireRescueLevel {
         };
         
         this.nozzle = { x: 200, y: 300, angle: 0, attachedToTruck: false };
-        this.ladder = { x: 0, y: 0, width: 60, height: 8, visible: false };
+        this.ladder = { x: 0, y: 0, width: 60, height: 8, visible: true };
         
         this.buildings = this.createBuildings();
         this.initializeWindows();
         this.spawnInitialFires();
+        
+        // Set up ladder and nozzle positions on truck from the start
+        this.setupTruckEquipment();
         
         this.init();
     }
     
     setupScreen() {
         this.gameScreen = document.getElementById('fire-game-screen');
+    }
+    
+    setupTruckEquipment() {
+        // Position ladder platform on top of truck from the start
+        this.ladder.x = this.truck.x + 20;
+        this.ladder.y = this.truck.y - 5;
+        // Position nozzle on the ladder
+        this.nozzle.x = this.ladder.x + this.ladder.width/2;
+        this.nozzle.y = this.ladder.y - 8;
     }
     
     init() {
@@ -213,6 +225,9 @@ class FireRescueLevel {
         
         // Respawn initial fires
         this.spawnInitialFires();
+        
+        // Set up truck equipment
+        this.setupTruckEquipment();
     }
     
     resizeCanvas() {
@@ -235,13 +250,8 @@ class FireRescueLevel {
         
         this.nozzle.y = height - 300;
         
-        // Update ladder and nozzle positions if they're active
-        if (this.ladder.visible) {
-            this.ladder.x = this.truck.x + 20;
-            this.ladder.y = this.truck.y - 5; // Just on top of truck
-            this.nozzle.x = this.ladder.x + this.ladder.width/2;
-            this.nozzle.y = this.ladder.y - 8;
-        }
+        // Always update ladder and nozzle positions (they're always visible now)
+        this.setupTruckEquipment();
         
         // Update building heights based on new canvas size
         this.buildings.forEach((building, index) => {
@@ -376,13 +386,6 @@ class FireRescueLevel {
             case 'TRUCK_CONNECTED':
                 if (this.isInCircle(pos, this.hydrant.port)) {
                     this.gameState = 'HYDRANT_CONNECTED';
-                    // Deploy ladder platform when hose reaches hydrant
-                    this.ladder.x = this.truck.x + 20;
-                    this.ladder.y = this.truck.y - 5; // Just on top of truck
-                    this.ladder.visible = true;
-                    // Position nozzle on the ladder (not attached yet)
-                    this.nozzle.x = this.ladder.x + this.ladder.width/2;
-                    this.nozzle.y = this.ladder.y - 8;
                     this.instructionText.textContent = 'Turn the valve!';
                     this.actionSynth.triggerAttackRelease('G4', '8n');
                 }
