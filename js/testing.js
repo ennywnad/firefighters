@@ -50,14 +50,11 @@ class GameTester {
 // Game-specific tests
 const gameTester = new GameTester();
 
-// Test: All level classes are available
-gameTester.addTest('Level Classes Available', () => {
+// Test: Fire Rescue level class is available
+gameTester.addTest('Fire Rescue Level Available', () => {
     const requiredClasses = [
-        'FireRescueLevel',
-        'AnimalRescueLevel', 
-        'TruckBuildingGame',
-        'StationMorningGame',
-        'EmergencyResponseLevel'
+        'FireRescueLevel'
+        // Other levels removed - see FUTURE_LEVELS.md for concepts
     ];
     
     for (const className of requiredClasses) {
@@ -67,15 +64,12 @@ gameTester.addTest('Level Classes Available', () => {
     }
 });
 
-// Test: All game screens exist in DOM
+// Test: Required game screens exist in DOM
 gameTester.addTest('Game Screens Exist', () => {
     const requiredScreens = [
         'menu-screen',
-        'fire-game-screen',
-        'animal-rescue-screen',
-        'truck-building-screen',
-        'station-morning-screen',
-        'emergency-response-screen'
+        'fire-game-screen'
+        // Other level screens removed - see FUTURE_LEVELS.md for concepts
     ];
     
     for (const screenId of requiredScreens) {
@@ -97,11 +91,7 @@ gameTester.addTest('Level Instantiation', () => {
         throw new Error('FireRescueLevel failed to initialize canvas context');
     }
     
-    // Test AnimalRescueLevel
-    const animalLevel = new window.AnimalRescueLevel(canvas, screen);
-    if (!animalLevel.ctx) {
-        throw new Error('AnimalRescueLevel failed to initialize canvas context');
-    }
+    // Only Fire Rescue level is currently active
 });
 
 // Test: Essential functions exist
