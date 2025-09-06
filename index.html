@@ -14,10 +14,12 @@
     <div id="menu-screen" class="game-screen menu-background">
         <h1 class="menu-title">Firefighter Adventures</h1>
         <button class="level-button menu-button-lg" data-level="fire">🔥 Fire Rescue 🔥</button>
+        <!-- Other levels temporarily disabled - see FUTURE_LEVELS.md for concepts
         <button class="level-button menu-button-lg" data-level="animal">🐱 Animal Rescue 🌳</button>
         <button class="level-button menu-button-lg" data-level="truck">🔧 Build a Truck 🚒</button>
         <button class="level-button menu-button-lg" data-level="station">🏢 Station Morning ☀️</button>
         <button class="level-button menu-button-lg" data-level="emergency">🚨 Emergency Response 🚨</button>
+        -->
         <button id="options-button">⚙️ Options</button>
     </div>
 
@@ -49,6 +51,16 @@
     <!-- Fire Game Screen -->
     <div id="fire-game-screen" class="game-screen hidden">
         <div id="fire-game-title" class="title">Fire Rescue!</div>
+        <div id="fire-timer-settings" class="timer-settings" style="display: none;">
+            <h3>Timer Settings</h3>
+            <button id="timer-1min" class="timer-option">1 Minute</button>
+            <button id="timer-5min" class="timer-option">5 Minutes</button>
+            <button id="timer-manual" class="timer-option">Manual End</button>
+        </div>
+        <div id="fire-timer-display" class="timer-display" style="display: none;">
+            Time: <span id="fire-timer-text">--:--</span>
+            <button id="end-now-button" style="display: none;">End Now</button>
+        </div>
         <canvas id="fireGameCanvas"></canvas>
         <div id="fire-game-instructions" class="instructions">Click the hose on the truck!</div>
         <button class="menu-button" onclick="goToMenu()">Menu</button>
@@ -114,21 +126,7 @@
         </div>
     </div>
 
-    <!-- Animal Rescue Screen -->
-    <div id="animal-rescue-screen" class="game-screen hidden">
-        <div class="title">Animal Rescue!</div>
-        <canvas id="animalRescueCanvas"></canvas>
-        <div id="animal-rescue-instructions" class="instructions">Choose an animal to rescue!</div>
-        <button class="menu-button" onclick="goToMenu()">Menu</button>
-        <div id="animal-select-menu">
-            <h2>Who needs saving?</h2>
-            <div>
-                <span class="animal-option" data-animal="kitty">🐱</span>
-                <span class="animal-option" data-animal="bird">🐦</span>
-                <span class="animal-option" data-animal="squirrel">🐿️</span>
-            </div>
-        </div>
-    </div>
+    <!-- Animal Rescue Screen removed - see FUTURE_LEVELS.md -->
 
     <div id="hero-report-screen" class="game-screen menu-background hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; justify-content: center; align-items: center; flex-direction: column; text-align: center; z-index: 100;">
         <h2 id="hero-report-message" style="font-size: 3rem; color: white; text-shadow: 2px 2px 0 #34495e;"></h2>
@@ -150,11 +148,8 @@
     <script src="js/FirefighterScoreboard.js"></script>
     <script src="js/animations/animationUtils.js"></script>
     <script src="js/animations/hoseAnimation.js"></script>
-    <script src="js/levels/truckBuilding.js"></script>
-    <script src="js/levels/stationMorning.js"></script>
     <script src="js/levels/fireRescue2.js"></script>
-    <script src="js/levels/animalRescue.js"></script>
-    <script src="js/levels/emergencyResponse.js"></script>
+    <!-- Other level scripts removed - see FUTURE_LEVELS.md for preserved concepts -->
     <script src="js/main.js"></script>
     <script src="js/testing.js"></script>
 </body>

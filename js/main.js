@@ -1,7 +1,7 @@
 // --- Global Navigation & Scene Management ---
 
-// Level Progression
-const levelOrder = ['fire', 'animal', 'truck', 'station', 'emergency'];
+// Level Progression - Currently only Fire Rescue is active
+const levelOrder = ['fire'];
 
 // Debug mode toggle
 let debugMode = localStorage.getItem('firefighterDebugMode') === 'true';
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const menuScreen = document.getElementById('menu-screen');
 const optionsScreen = document.getElementById('options-screen');
 const fireGameScreen = document.getElementById('fire-game-screen');
-const animalRescueScreen = document.getElementById('animal-rescue-screen');
+// Other level screens removed - only Fire Rescue active
 const muteButton = document.getElementById('mute-button');
 const heroReportScreen = document.getElementById('hero-report-screen');
 const heroReportMessage = document.getElementById('hero-report-message');
@@ -69,9 +69,8 @@ reportPlayAgainButton.addEventListener('click', () => {
     heroReportScreen.classList.add('hidden');
     if (chosenLevel === 'fire') {
         startFireGame();
-    } else if (chosenLevel === 'animal') {
-        startAnimalRescueGame();
     }
+    // Other levels removed - see FUTURE_LEVELS.md
 });
 
 let activeGameIntervals = [];
@@ -91,61 +90,13 @@ document.querySelectorAll('.level-button').forEach(button => {
         chosenLevel = button.dataset.level;
         menuScreen.classList.add('hidden');
         
-        // Truck building doesn't need scene selection
-        if (chosenLevel === 'truck') {
-            const truckGame = new TruckBuildingGame();
-            truckGame.gameScreen.classList.remove('hidden');
-            // Force canvas resize after screen is visible
-            setTimeout(() => {
-                truckGame.resizeCanvas();
-                // Try again after DOM settles
-                setTimeout(() => truckGame.resizeCanvas(), 100);
-            }, 10);
-            toggleBackgroundMusic(true);
-        } else if (chosenLevel === 'station') {
-            const stationGame = new StationMorningGame();
-            stationGame.gameScreen.classList.remove('hidden');
-            // Force canvas resize after screen is visible
-            setTimeout(() => {
-                stationGame.resizeCanvas();
-                // Try again after DOM settles
-                setTimeout(() => stationGame.resizeCanvas(), 100);
-            }, 10);
-            toggleBackgroundMusic(true);
-        } else if (chosenLevel === 'emergency') {
-            let emergencyScreen = document.getElementById('emergency-response-screen');
-            if (!emergencyScreen) {
-                emergencyScreen = document.createElement('div');
-                emergencyScreen.id = 'emergency-response-screen';
-                emergencyScreen.className = 'game-screen hidden';
-                emergencyScreen.innerHTML = `
-                    <div class="title">Emergency!</div>
-                    <canvas id="emergencyResponseCanvas"></canvas>
-                    <div id="emergency-response-instructions" class="instructions">Answer the call!</div>
-                    <button class="menu-button" onclick="goToMenu()">Menu</button>
-                `;
-                document.body.appendChild(emergencyScreen);
-            }
-            emergencyScreen.classList.remove('hidden');
-            const emergencyGame = new EmergencyResponseLevel();
-            setTimeout(() => {
-                emergencyGame.start();
-                // Try resizing again after DOM settles
-                setTimeout(() => emergencyGame.resizeCanvas(), 100);
-            }, 10);
-            toggleBackgroundMusic(true);
-        } else {
-            // For fire and animal rescue, go directly to the level (default to day scene)
-            currentScene = scenes.day;
-            if (chosenLevel === 'fire') {
-                const fireGame = new FireRescueLevel();
-                fireGame.start();
-            } else if (chosenLevel === 'animal') {
-                animalRescueScreen.classList.remove('hidden');
-                setTimeout(() => startAnimalRescueGame(), 10);
-            }
-            toggleBackgroundMusic(true);
+        // Only Fire Rescue level is currently active
+        currentScene = scenes.day;
+        if (chosenLevel === 'fire') {
+            const fireGame = new FireRescueLevel();
+            fireGame.start();
         }
+        toggleBackgroundMusic(true);
     });
 });
 
@@ -197,11 +148,7 @@ function showHeroReport(message) {
     heroReportMessage.textContent = message;
     const fireGameScreen = document.getElementById('fire-game-screen');
     if (fireGameScreen) fireGameScreen.classList.add('hidden');
-    animalRescueScreen.classList.add('hidden');
-    const truckScreen = document.getElementById('truck-building-screen');
-    if (truckScreen) truckScreen.classList.add('hidden');
-    const stationScreen = document.getElementById('station-morning-screen');
-    if (stationScreen) stationScreen.classList.add('hidden');
+    // Only Fire Rescue screen needs to be hidden
     
     heroReportScreen.classList.remove('hidden');
     toggleBackgroundMusic(false);
@@ -214,10 +161,7 @@ function goToMenu() {
     
     // Cancel all animation frames
     if (window.fireGameAnimationId) cancelAnimationFrame(window.fireGameAnimationId);
-    if (window.animalRescueAnimationId) cancelAnimationFrame(window.animalRescueAnimationId);
-    if (window.truckBuildingAnimationId) cancelAnimationFrame(window.truckBuildingAnimationId);
-    if (window.stationMorningAnimationId) cancelAnimationFrame(window.stationMorningAnimationId);
-    if (window.emergencyResponseAnimationId) cancelAnimationFrame(window.emergencyResponseAnimationId);
+    // Other level animations removed - only Fire Rescue active
 
     // Hide all game screens
     const allScreens = document.querySelectorAll('.game-screen');
@@ -359,9 +303,4 @@ function startFireGame() {
     fireGame.start();
 }
 
-function startAnimalRescueGame() {
-    const canvas = document.getElementById('animalRescueCanvas');
-    const gameScreen = document.getElementById('animal-rescue-screen');
-    const animalGame = new AnimalRescueLevel(canvas, gameScreen);
-    animalGame.start();
-}
+// Other level start functions removed - see FUTURE_LEVELS.md for concepts

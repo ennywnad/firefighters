@@ -16,6 +16,12 @@ class FireRescueLevel {
         this.totalFires = 0;
         this.gameStartTime = Date.now();
         
+        // Timer properties
+        this.timerMode = 'manual'; // 'manual', '1min', '5min'
+        this.timerDuration = 0; // in milliseconds
+        this.timerStartTime = null;
+        this.timerEnded = false;
+        
         // Audio
         this.actionSynth = new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination();
         this.waterSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0 } }).toDestination();
@@ -44,21 +50,7 @@ class FireRescueLevel {
     }
     
     setupScreen() {
-        let screen = document.getElementById('fire-game-screen');
-        if (!screen) {
-            screen = document.createElement('div');
-            screen.id = 'fire-game-screen';
-            screen.className = 'game-screen hidden';
-            screen.innerHTML = `
-                <div class="title">Fire Rescue!</div>
-                <canvas id="fireGameCanvas"></canvas>
-                <div id="fire-game-instructions" class="instructions">Click the yellow hose coil!</div>
-                <button class="menu-button" onclick="goToMenu()">Menu</button>
-                <button id="return-station-button" class="menu-button" style="right: 15px; left: auto;">Return to Station</button>
-            `;
-            document.body.appendChild(screen);
-        }
-        this.gameScreen = screen;
+        this.gameScreen = document.getElementById('fire-game-screen');
     }
     
     init() {
@@ -75,10 +67,125 @@ class FireRescueLevel {
             returnButton.addEventListener('click', () => this.returnToStation());
         }
         
+        // Add timer settings event listeners
+        this.setupTimerControls();
+        
         this.gameLoop();
     }
     
+    setupTimerControls() {
+        const timer1MinButton = document.getElementById('timer-1min');
+        const timer5MinButton = document.getElementById('timer-5min');
+        const timerManualButton = document.getElementById('timer-manual');
+        const endNowButton = document.getElementById('end-now-button');
+        
+        if (timer1MinButton) {
+            timer1MinButton.addEventListener('click', () => this.setTimerMode('1min'));
+        }
+        if (timer5MinButton) {
+            timer5MinButton.addEventListener('click', () => this.setTimerMode('5min'));
+        }
+        if (timerManualButton) {
+            timerManualButton.addEventListener('click', () => this.setTimerMode('manual'));
+        }
+        if (endNowButton) {
+            endNowButton.addEventListener('click', () => this.endGameNow());
+        }
+    }
+    
+    setTimerMode(mode) {
+        this.timerMode = mode;
+        const timerSettings = document.getElementById('fire-timer-settings');
+        const timerDisplay = document.getElementById('fire-timer-display');
+        const endNowButton = document.getElementById('end-now-button');
+        
+        if (timerSettings) timerSettings.style.display = 'none';
+        if (timerDisplay) timerDisplay.style.display = 'block';
+        
+        switch (mode) {
+            case '1min':
+                this.timerDuration = 60000; // 1 minute
+                break;
+            case '5min':
+                this.timerDuration = 300000; // 5 minutes
+                break;
+            case 'manual':
+                this.timerDuration = 0;
+                if (endNowButton) endNowButton.style.display = 'inline-block';
+                break;
+        }
+        
+        this.timerStartTime = Date.now();
+        this.timerEnded = false;
+        this.updateTimerDisplay();
+        
+        // Start the actual gameplay
+        this.startGameplay();
+    }
+    
+    updateTimerDisplay() {
+        const timerText = document.getElementById('fire-timer-text');
+        if (!timerText) return;
+        
+        if (this.timerMode === 'manual') {
+            const elapsed = Math.floor((Date.now() - this.timerStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            const remaining = Math.max(0, this.timerDuration - (Date.now() - this.timerStartTime));
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Check if time is up
+            if (remaining <= 0 && !this.timerEnded) {
+                this.endGameNow();
+            }
+        }
+    }
+    
+    endGameNow() {
+        this.timerEnded = true;
+        setTimeout(() => {
+            // End session and show scoreboard
+            if (window.firefighterScoreboard) {
+                window.firefighterScoreboard.endSession();
+                window.firefighterScoreboard.showScoreboard();
+            } else {
+                // Fallback to return to station report
+                this.returnToStation();
+            }
+        }, 500);
+    }
+    
     start() {
+        // Reset timer properties
+        this.timerMode = 'manual';
+        this.timerDuration = 0;
+        this.timerStartTime = null;
+        this.timerEnded = false;
+        
+        this.gameScreen.classList.remove('hidden');
+        
+        // Show timer settings and wait for selection
+        const timerSettings = document.getElementById('fire-timer-settings');
+        const timerDisplay = document.getElementById('fire-timer-display');
+        const endNowButton = document.getElementById('end-now-button');
+        
+        if (timerSettings) timerSettings.style.display = 'block';
+        if (timerDisplay) timerDisplay.style.display = 'none';
+        if (endNowButton) endNowButton.style.display = 'none';
+        
+        this.resizeCanvas();
+        // Double-check sizing after a moment
+        setTimeout(() => this.resizeCanvas(), 50);
+        
+        // Set instructions to choose timer
+        this.instructionText.textContent = 'Choose your timer setting above to begin!';
+    }
+    
+    startGameplay() {
         // Reset game state
         this.gameState = 'START';
         this.isSpraying = false;
@@ -92,11 +199,6 @@ class FireRescueLevel {
         this.nozzle.x = 200;
         this.nozzle.y = 300;
         this.nozzle.angle = 0;
-        
-        this.gameScreen.classList.remove('hidden');
-        this.resizeCanvas();
-        // Double-check sizing after a moment
-        setTimeout(() => this.resizeCanvas(), 50);
         
         // Start scoreboard tracking
         if (window.firefighterScoreboard) {
@@ -249,6 +351,9 @@ class FireRescueLevel {
     }
     
     handleClick(e) {
+        // Don't allow clicks until timer is selected
+        if (!this.timerStartTime) return;
+        
         const pos = this.getMousePos(e);
         
         switch (this.gameState) {
@@ -354,6 +459,11 @@ class FireRescueLevel {
     }
     
     update() {
+        // Update timer display if timer is active
+        if (this.timerStartTime && !this.timerEnded) {
+            this.updateTimerDisplay();
+        }
+        
         // Update window lighting gradually
         this.updateWindows();
         
@@ -418,18 +528,14 @@ class FireRescueLevel {
             }
         });
         
-        // Check win condition
-        if (this.fires.length === 0 && this.firesExtinguished > 0) {
+        // Check win condition - but don't auto-end in manual mode unless explicitly ended
+        if (this.fires.length === 0 && this.firesExtinguished > 0 && this.timerMode !== 'manual') {
             setTimeout(() => {
-                // End session and show scoreboard instead of hero report
-                if (window.firefighterScoreboard) {
-                    window.firefighterScoreboard.endSession();
-                    window.firefighterScoreboard.showScoreboard();
-                } else {
-                    // Fallback to original hero report
-                    showHeroReport(`Amazing work! You extinguished ${this.firesExtinguished} fires!`);
-                }
+                this.endGameNow();
             }, 1000);
+        } else if (this.fires.length === 0 && this.timerMode !== 'manual') {
+            // Spawn a new fire to keep the game going in timed modes
+            this.spawnNewFire();
         }
     }
     
