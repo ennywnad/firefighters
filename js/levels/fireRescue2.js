@@ -376,6 +376,13 @@ class FireRescueLevel {
             case 'TRUCK_CONNECTED':
                 if (this.isInCircle(pos, this.hydrant.port)) {
                     this.gameState = 'HYDRANT_CONNECTED';
+                    // Deploy ladder platform when hose reaches hydrant
+                    this.ladder.x = this.truck.x + 20;
+                    this.ladder.y = this.truck.y - 5; // Just on top of truck
+                    this.ladder.visible = true;
+                    // Position nozzle on the ladder (not attached yet)
+                    this.nozzle.x = this.ladder.x + this.ladder.width/2;
+                    this.nozzle.y = this.ladder.y - 8;
                     this.instructionText.textContent = 'Turn the valve!';
                     this.actionSynth.triggerAttackRelease('G4', '8n');
                 }
@@ -385,13 +392,6 @@ class FireRescueLevel {
                 if (this.isInRect(pos, this.hydrant.valve)) {
                     this.gameState = 'READY_TO_SPRAY';
                     this.nozzle.attachedToTruck = true;
-                    // Position ladder platform on top of truck
-                    this.ladder.x = this.truck.x + 20;
-                    this.ladder.y = this.truck.y - 5; // Just on top of truck
-                    this.ladder.visible = true;
-                    // Position nozzle on the ladder
-                    this.nozzle.x = this.ladder.x + this.ladder.width/2;
-                    this.nozzle.y = this.ladder.y - 8;
                     this.instructionText.textContent = 'Hold mouse to spray water!';
                     this.actionSynth.triggerAttackRelease('C5', '8n');
                 }
@@ -711,7 +711,7 @@ ${this.firesExtinguished === this.totalFires ?
     }
     
     drawNozzle() {
-        if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
+        if (this.ladder.visible) {
             this.ctx.save();
             this.ctx.translate(this.nozzle.x, this.nozzle.y);
             this.ctx.rotate(this.nozzle.angle);
