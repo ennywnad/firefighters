@@ -48,6 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLevelButtons();
     });
     
+    // Developer Reference button
+    document.getElementById('developer-reference-button').addEventListener('click', () => {
+        menuScreen.classList.add('hidden');
+        const developerReference = new DeveloperReference();
+        developerReference.start();
+        toggleBackgroundMusic(false);
+    });
+    
 });
 
 const menuScreen = document.getElementById('menu-screen');

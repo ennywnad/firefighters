@@ -20,6 +20,7 @@
         <button class="level-button menu-button-lg" data-level="station">🏢 Station Morning ☀️</button>
         <button class="level-button menu-button-lg" data-level="emergency">🚨 Emergency Response 🚨</button>
         -->
+        <button id="developer-reference-button" class="menu-button-lg" style="background: #9b59b6; margin-top: 20px;">📐 Developer Reference</button>
         <button id="options-button">⚙️ Options</button>
     </div>
 
@@ -126,6 +127,51 @@
         </div>
     </div>
 
+    <!-- Developer Reference Screen -->
+    <div id="developer-reference-screen" class="game-screen hidden">
+        <div class="title">Developer Reference - Fire Rescue Elements</div>
+        <div style="position: absolute; top: 80px; left: 20px; right: 20px; bottom: 100px; background: rgba(255,255,255,0.9); border-radius: 10px; padding: 20px; overflow-y: auto;">
+            <div style="display: flex; gap: 20px; height: 100%;">
+                <div style="flex: 1;">
+                    <canvas id="referenceCanvas" style="width: 100%; height: 400px; border: 2px solid #34495e; border-radius: 5px; background: #87CEEB;"></canvas>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <button id="ref-show-truck" class="timer-option">🚒 Truck</button>
+                        <button id="ref-show-hydrant" class="timer-option">🚰 Hydrant</button>
+                        <button id="ref-show-buildings" class="timer-option">🏢 Buildings</button>
+                        <button id="ref-show-all" class="timer-option">📊 All Elements</button>
+                        <button id="ref-toggle-measurements" class="timer-option">📏 Toggle Measurements</button>
+                    </div>
+                </div>
+                <div style="flex: 1; background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; overflow-y: auto;">
+                    <h3 style="margin-top: 0;">Element Details</h3>
+                    <div id="reference-details">
+                        <p><strong>Fire Truck:</strong></p>
+                        <p>• Main Body: 120×80px at (100, y-180)</p>
+                        <p>• Cab: 40×30px at (+80, -20 from body)</p>
+                        <p>• Wheels: 15px radius at (+25, +95)</p>
+                        <p>• Hose Coil: 20px radius at (+50, +30)</p>
+                        <p>• Port: 12px radius at (+100, +40)</p>
+                        <br>
+                        <p><strong>Hydrant:</strong></p>
+                        <p>• Main Body: 40×60px at (350, y-160)</p>
+                        <p>• Top Cap: 25px radius</p>
+                        <p>• Port: 12px radius at (+0, +30)</p>
+                        <p>• Valve: 30×15px at (-20, -20)</p>
+                        <br>
+                        <p><strong>Ladder Platform:</strong></p>
+                        <p>• Size: 60×8px</p>
+                        <p>• Position: truck.x+20, truck.y-5</p>
+                        <br>
+                        <p><strong>Nozzle:</strong></p>
+                        <p>• Size: 40×16px</p>
+                        <p>• Position: on ladder center, -8px up</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="menu-button" onclick="goToMenu()">Back to Menu</button>
+    </div>
+
     <!-- Animal Rescue Screen removed - see FUTURE_LEVELS.md -->
 
     <div id="hero-report-screen" class="game-screen menu-background hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; justify-content: center; align-items: center; flex-direction: column; text-align: center; z-index: 100;">
@@ -149,6 +195,7 @@
     <script src="js/animations/animationUtils.js"></script>
     <script src="js/animations/hoseAnimation.js"></script>
     <script src="js/levels/fireRescue2.js"></script>
+    <script src="js/DeveloperReference.js"></script>
     <!-- Other level scripts removed - see FUTURE_LEVELS.md for preserved concepts -->
     <script src="js/main.js"></script>
     <script src="js/testing.js"></script>
