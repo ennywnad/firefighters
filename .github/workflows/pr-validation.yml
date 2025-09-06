@@ -110,13 +110,9 @@ jobs:
           fi
         done
         
-        # Check that all level files exist
+        # Check that required level files exist (currently only Fire Rescue)
         level_files=(
-          "js/levels/stationMorning.js"
           "js/levels/fireRescue2.js"
-          "js/levels/animalRescue.js"
-          "js/levels/truckBuilding.js"
-          "js/levels/emergencyResponse.js"
         )
         
         for file in "${level_files[@]}"; do
@@ -125,6 +121,12 @@ jobs:
             exit 1
           fi
         done
+        
+        # Verify FUTURE_LEVELS.md exists to document removed concepts
+        if [ ! -f "FUTURE_LEVELS.md" ]; then
+          echo "FUTURE_LEVELS.md missing - required for documenting removed level concepts"
+          exit 1
+        fi
         
     - name: Check for TODOs and FIXMEs
       run: |
