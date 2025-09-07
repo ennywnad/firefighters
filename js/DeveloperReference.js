@@ -61,7 +61,7 @@ class DeveloperReference {
         
         const container = this.canvas.parentElement;
         const width = container.clientWidth;
-        const height = 400;
+        const height = 600; // Match typical game canvas height
         
         this.canvas.width = width;
         this.canvas.height = height;
