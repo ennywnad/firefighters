@@ -9,7 +9,7 @@ class DeveloperReference {
         this.currentView = 'all';
         
         // Create a reference fire rescue level for measurements
-        this.fireRescue = new FireRescueLevel();
+        this.fireRescue = null;
         
         this.init();
     }
@@ -31,8 +31,29 @@ class DeveloperReference {
     start() {
         this.screen.classList.remove('hidden');
         this.resizeCanvas();
+        
+        // Initialize fire rescue with our reference canvas
+        this.initializeFireRescue();
+        
         setTimeout(() => this.resizeCanvas(), 50);
         this.draw();
+    }
+    
+    initializeFireRescue() {
+        // Create a properly initialized fire rescue instance
+        this.fireRescue = new FireRescueLevel();
+        this.fireRescue.canvas = this.canvas;
+        this.fireRescue.ctx = this.ctx;
+        this.fireRescue.gameScreen = this.screen;
+        
+        // Set it to a state where all elements are visible
+        this.fireRescue.gameState = 'READY_TO_SPRAY';
+        this.fireRescue.ladder.visible = true;
+        this.fireRescue.nozzle.attachedToTruck = true;
+        
+        // Initialize positions
+        this.fireRescue.setupTruckEquipment();
+        this.fireRescue.resizeCanvas();
     }
     
     resizeCanvas() {
@@ -46,8 +67,11 @@ class DeveloperReference {
         this.canvas.height = height;
         
         // Update fire rescue positions for our canvas size
-        this.fireRescue.canvas = this.canvas;
-        this.fireRescue.resizeCanvas();
+        if (this.fireRescue) {
+            this.fireRescue.canvas = this.canvas;
+            this.fireRescue.ctx = this.ctx;
+            this.fireRescue.resizeCanvas();
+        }
         
         this.draw();
     }
@@ -90,6 +114,8 @@ class DeveloperReference {
     }
     
     draw() {
+        if (!this.fireRescue) return;
+        
         // Clear canvas with sky blue background
         this.ctx.fillStyle = '#87CEEB';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
