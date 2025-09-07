@@ -62,6 +62,14 @@
             Time: <span id="fire-timer-text">--:--</span>
             <button id="end-now-button" style="display: none;">End Now</button>
         </div>
+        <div id="fire-developer-controls" class="developer-controls" style="display: none;">
+            <h4>Developer Mode</h4>
+            <button id="dev-toggle-truck" class="dev-toggle">🚒 Truck</button>
+            <button id="dev-toggle-hydrant" class="dev-toggle">🚰 Hydrant</button>
+            <button id="dev-toggle-buildings" class="dev-toggle">🏢 Buildings</button>
+            <button id="dev-toggle-coords" class="dev-toggle">📍 Coordinates</button>
+            <button id="dev-mode-off" class="dev-toggle" style="background: #e74c3c;">❌ Exit Dev Mode</button>
+        </div>
         <canvas id="fireGameCanvas"></canvas>
         <div id="fire-game-instructions" class="instructions">Click the hose on the truck!</div>
         <button class="menu-button" onclick="goToMenu()">Menu</button>

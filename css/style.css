@@ -114,6 +114,54 @@ canvas {
     background: #c0392b;
 }
 
+/* Developer mode controls */
+.developer-controls {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    padding: 15px;
+    color: white;
+    z-index: 100;
+}
+
+.developer-controls h4 {
+    margin: 0 0 10px 0;
+    color: #f39c12;
+    font-size: 1.1rem;
+}
+
+.dev-toggle {
+    background: #34495e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 3px;
+    font-family: 'Bangers', cursive;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: block;
+    width: 140px;
+    text-align: left;
+}
+
+.dev-toggle:hover {
+    background: #2c3e50;
+    transform: translateY(-1px);
+}
+
+.dev-toggle.active {
+    background: #3498db;
+    color: white;
+}
+
+.dev-toggle.active:hover {
+    background: #2980b9;
+}
+
 /* Mobile and tablet responsive design */
 @media (max-width: 768px) {
     body {

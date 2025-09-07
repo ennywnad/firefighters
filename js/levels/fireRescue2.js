@@ -22,6 +22,13 @@ class FireRescueLevel {
         this.timerStartTime = null;
         this.timerEnded = false;
         
+        // Developer mode properties
+        this.developerMode = false;
+        this.showTruckMeasurements = false;
+        this.showHydrantMeasurements = false;
+        this.showBuildingMeasurements = false;
+        this.showCoordinates = false;
+        
         // Audio
         this.actionSynth = new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination();
         this.waterSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0 } }).toDestination();
@@ -73,6 +80,14 @@ class FireRescueLevel {
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         window.addEventListener('mouseup', () => this.handleMouseUp());
         
+        // Developer mode keyboard shortcut (Ctrl+Shift+D)
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                this.toggleDeveloperMode();
+            }
+        });
+        
         // Add Return to Station button functionality
         const returnButton = document.getElementById('return-station-button');
         if (returnButton) {
@@ -81,6 +96,9 @@ class FireRescueLevel {
         
         // Add timer settings event listeners
         this.setupTimerControls();
+        
+        // Add developer mode event listeners
+        this.setupDeveloperControls();
         
         this.gameLoop();
     }
@@ -133,6 +151,84 @@ class FireRescueLevel {
         
         // Start the actual gameplay
         this.startGameplay();
+    }
+    
+    setupDeveloperControls() {
+        const devToggleTruck = document.getElementById('dev-toggle-truck');
+        const devToggleHydrant = document.getElementById('dev-toggle-hydrant');
+        const devToggleBuildings = document.getElementById('dev-toggle-buildings');
+        const devToggleCoords = document.getElementById('dev-toggle-coords');
+        const devModeOff = document.getElementById('dev-mode-off');
+        
+        if (devToggleTruck) {
+            devToggleTruck.addEventListener('click', () => this.toggleTruckMeasurements());
+        }
+        if (devToggleHydrant) {
+            devToggleHydrant.addEventListener('click', () => this.toggleHydrantMeasurements());
+        }
+        if (devToggleBuildings) {
+            devToggleBuildings.addEventListener('click', () => this.toggleBuildingMeasurements());
+        }
+        if (devToggleCoords) {
+            devToggleCoords.addEventListener('click', () => this.toggleCoordinates());
+        }
+        if (devModeOff) {
+            devModeOff.addEventListener('click', () => this.toggleDeveloperMode());
+        }
+    }
+    
+    toggleDeveloperMode() {
+        this.developerMode = !this.developerMode;
+        const devControls = document.getElementById('fire-developer-controls');
+        
+        if (devControls) {
+            devControls.style.display = this.developerMode ? 'block' : 'none';
+        }
+        
+        // Reset all measurement toggles when entering developer mode
+        if (this.developerMode) {
+            this.showTruckMeasurements = false;
+            this.showHydrantMeasurements = false;
+            this.showBuildingMeasurements = false;
+            this.showCoordinates = false;
+            this.updateDeveloperButtons();
+        }
+    }
+    
+    toggleTruckMeasurements() {
+        this.showTruckMeasurements = !this.showTruckMeasurements;
+        this.updateDeveloperButtons();
+    }
+    
+    toggleHydrantMeasurements() {
+        this.showHydrantMeasurements = !this.showHydrantMeasurements;
+        this.updateDeveloperButtons();
+    }
+    
+    toggleBuildingMeasurements() {
+        this.showBuildingMeasurements = !this.showBuildingMeasurements;
+        this.updateDeveloperButtons();
+    }
+    
+    toggleCoordinates() {
+        this.showCoordinates = !this.showCoordinates;
+        this.updateDeveloperButtons();
+    }
+    
+    updateDeveloperButtons() {
+        const buttons = [
+            { id: 'dev-toggle-truck', active: this.showTruckMeasurements },
+            { id: 'dev-toggle-hydrant', active: this.showHydrantMeasurements },
+            { id: 'dev-toggle-buildings', active: this.showBuildingMeasurements },
+            { id: 'dev-toggle-coords', active: this.showCoordinates }
+        ];
+        
+        buttons.forEach(({ id, active }) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.classList.toggle('active', active);
+            }
+        });
     }
     
     updateTimerDisplay() {
@@ -582,6 +678,11 @@ ${this.firesExtinguished === this.totalFires ?
         this.drawWater();
         this.drawFires();
         this.drawHighlights();
+        
+        // Draw developer measurements if enabled
+        if (this.developerMode) {
+            this.drawDeveloperOverlays();
+        }
     }
     
     drawBuildings() {
@@ -794,6 +895,166 @@ ${this.firesExtinguished === this.totalFires ?
         this.update();
         this.draw();
         window.fireGameAnimationId = requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    drawDeveloperOverlays() {
+        this.ctx.save();
+        this.ctx.font = '12px Arial';
+        this.ctx.strokeStyle = '#ff0000';
+        this.ctx.lineWidth = 2;
+        
+        if (this.showTruckMeasurements) {
+            this.drawTruckMeasurements();
+        }
+        
+        if (this.showHydrantMeasurements) {
+            this.drawHydrantMeasurements();
+        }
+        
+        if (this.showBuildingMeasurements) {
+            this.drawBuildingMeasurements();
+        }
+        
+        if (this.showCoordinates) {
+            this.drawCoordinates();
+        }
+        
+        this.ctx.restore();
+    }
+    
+    drawTruckMeasurements() {
+        const truck = this.truck;
+        const ladder = this.ladder;
+        const nozzle = this.nozzle;
+        
+        // Main body measurements
+        this.drawMeasurement(truck.x, truck.y - 15, truck.x + truck.width, truck.y - 15, `${truck.width}px`, 'top');
+        this.drawMeasurement(truck.x - 15, truck.y, truck.x - 15, truck.y + truck.height, `${truck.height}px`, 'left');
+        
+        // Cab measurements
+        this.drawMeasurement(truck.x + 80, truck.y - 35, truck.x + 120, truck.y - 35, '40px', 'top');
+        this.drawMeasurement(truck.x + 125, truck.y - 20, truck.x + 125, truck.y + 10, '30px', 'right');
+        
+        // Wheel measurements
+        this.drawRadialMeasurement(truck.x + 25, truck.y + truck.height + 15, 15, 'Wheel: 15px');
+        this.drawRadialMeasurement(truck.x + 95, truck.y + truck.height + 15, 15, 'Wheel: 15px');
+        
+        // Port measurement
+        this.drawRadialMeasurement(truck.port.x, truck.port.y, truck.port.radius, 'Port: 12px');
+        
+        // Hose coil measurement (if visible)
+        if (this.gameState === 'START') {
+            this.drawRadialMeasurement(truck.hoseCoil.x, truck.hoseCoil.y, truck.hoseCoil.radius, 'Hose: 20px');
+        }
+        
+        // Ladder measurements
+        if (ladder.visible) {
+            this.drawMeasurement(ladder.x, ladder.y - 25, ladder.x + ladder.width, ladder.y - 25, '60px', 'top');
+        }
+    }
+    
+    drawHydrantMeasurements() {
+        const hydrant = this.hydrant;
+        
+        // Main body measurements
+        this.drawMeasurement(hydrant.x - 30, hydrant.y, hydrant.x - 30, hydrant.y + hydrant.height, `${hydrant.height}px`, 'left');
+        this.drawMeasurement(hydrant.x, hydrant.y + hydrant.height + 15, hydrant.x + hydrant.width, hydrant.y + hydrant.height + 15, `${hydrant.width}px`, 'bottom');
+        
+        // Top cap
+        this.drawRadialMeasurement(hydrant.x + hydrant.width/2, hydrant.y, 25, 'Cap: 25px');
+        
+        // Port measurement
+        this.drawRadialMeasurement(hydrant.port.x, hydrant.port.y, hydrant.port.radius, 'Port: 12px');
+        
+        // Valve measurements
+        this.drawMeasurement(hydrant.valve.x, hydrant.valve.y - 10, hydrant.valve.x + hydrant.valve.width, hydrant.valve.y - 10, '30px', 'top');
+    }
+    
+    drawBuildingMeasurements() {
+        this.buildings.forEach((building, index) => {
+            // Height measurement
+            this.drawMeasurement(building.x - 20, building.y, building.x - 20, building.y + building.height, `${building.height}px`, 'left');
+            
+            // Width measurement  
+            this.drawMeasurement(building.x, building.y - 10, building.x + building.width, building.y - 10, `${building.width}px`, 'top');
+            
+            // Building label
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillText(`Building ${index + 1}`, building.x + 5, building.y + 20);
+        });
+    }
+    
+    drawCoordinates() {
+        const elements = [
+            { x: this.truck.x, y: this.truck.y, label: `Truck (${this.truck.x}, ${this.truck.y})` },
+            { x: this.hydrant.x, y: this.hydrant.y, label: `Hydrant (${this.hydrant.x}, ${this.hydrant.y})` },
+            { x: this.nozzle.x, y: this.nozzle.y, label: `Nozzle (${Math.round(this.nozzle.x)}, ${Math.round(this.nozzle.y)})` }
+        ];
+        
+        elements.forEach(element => {
+            this.drawCoordinate(element.x, element.y, element.label);
+        });
+    }
+    
+    drawMeasurement(x1, y1, x2, y2, text, position) {
+        // Draw measurement line
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+        
+        // Draw end markers
+        const markerSize = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1 - markerSize);
+        this.ctx.lineTo(x1, y1 + markerSize);
+        this.ctx.moveTo(x2, y2 - markerSize);
+        this.ctx.lineTo(x2, y2 + markerSize);
+        this.ctx.stroke();
+        
+        // Draw text
+        const centerX = (x1 + x2) / 2;
+        const centerY = (y1 + y2) / 2;
+        
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.fillRect(centerX - 25, centerY - 10, 50, 20);
+        this.ctx.strokeRect(centerX - 25, centerY - 10, 50, 20);
+        this.ctx.fillStyle = '#000';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(text, centerX, centerY + 4);
+        this.ctx.textAlign = 'start';
+    }
+    
+    drawRadialMeasurement(x, y, radius, text) {
+        // Draw radius line
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y);
+        this.ctx.lineTo(x + radius, y);
+        this.ctx.stroke();
+        
+        // Draw text
+        const textWidth = this.ctx.measureText(text).width;
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.fillRect(x + radius + 5, y - 10, textWidth + 10, 20);
+        this.ctx.strokeRect(x + radius + 5, y - 10, textWidth + 10, 20);
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillText(text, x + radius + 10, y + 4);
+    }
+    
+    drawCoordinate(x, y, text) {
+        // Draw coordinate point
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Draw label
+        const textWidth = this.ctx.measureText(text).width;
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.fillRect(x + 8, y - 10, textWidth + 10, 20);
+        this.ctx.strokeRect(x + 8, y - 10, textWidth + 10, 20);
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillText(text, x + 13, y + 4);
     }
 }
 
