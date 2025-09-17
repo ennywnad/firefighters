@@ -388,7 +388,5 @@ class VoiceGuide {
 // Create global instance
 window.voiceGuide = new VoiceGuide();
 
-// Initialize voice controls when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    window.voiceGuide.createVoiceControls();
-});
+// Voice controls are now handled in the options menu
+// No automatic UI creation needed

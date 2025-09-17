@@ -10,57 +10,58 @@
 </head>
 <body>
 
-    <!-- Menu Screen -->
-    <div id="menu-screen" class="game-screen menu-background">
-        <h1 class="menu-title">Firefighter Adventures</h1>
-        <button class="level-button menu-button-lg" data-level="fire">🔥 Fire Rescue 🔥</button>
-        <!-- Other levels temporarily disabled - see FUTURE_LEVELS.md for concepts
-        <button class="level-button menu-button-lg" data-level="animal">🐱 Animal Rescue 🌳</button>
-        <button class="level-button menu-button-lg" data-level="truck">🔧 Build a Truck 🚒</button>
-        <button class="level-button menu-button-lg" data-level="station">🏢 Station Morning ☀️</button>
-        <button class="level-button menu-button-lg" data-level="emergency">🚨 Emergency Response 🚨</button>
-        -->
-        <button id="developer-reference-button" class="menu-button-lg" style="background: #9b59b6; margin-top: 20px;">📐 Developer Reference</button>
-        <button id="options-button">⚙️ Options</button>
-    </div>
-
+    <div id="game-container">
     <!-- Options Menu -->
     <div id="options-screen" class="game-screen menu-background hidden">
         <h1 class="menu-title">Options</h1>
         
-        <div class="options-section">
-            <h2>🌅 Scene Selection</h2>
-            <div>
-                <button class="scene-button menu-button-lg" data-scene="day">☀️ Day</button>
-                <button class="scene-button menu-button-lg" data-scene="night">🌙 Night</button>
-            </div>
-            <div>
-                <button class="scene-button menu-button-lg" data-scene="autumn">🍂 Autumn</button>
-                <button class="scene-button menu-button-lg" data-scene="winter">❄️ Winter</button>
-            </div>
-        </div>
         
         <div class="options-section">
-            <h2>🔧 Developer Options</h2>
-            <button id="debug-toggle-button" class="menu-button-lg">🐛 Debug Mode: <span id="debug-status">OFF</span></button>
-            <button id="reset-progress-button" class="menu-button-lg">🗑️ Reset Progress</button>
+            <h2>🔊 Audio</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <span style="color: white; font-size: 1.2rem;">Voice Guide:</span>
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" id="voice-enabled-checkbox" style="transform: scale(1.5);">
+                    <span style="color: white; margin-left: 8px;">On</span>
+                </label>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <span style="color: white; font-size: 1.2rem;">Water Sound:</span>
+                <select id="sound-select" style="font-family: 'Bangers', cursive; background-color: #34495e; color: white; border: 2px solid #FFD700; border-radius: 5px; padding: 5px;">
+                    <option value="white" selected>Default</option>
+                    <option value="pink">Deeper</option>
+                    <option value="brown">Rumbly</option>
+                    <option value="disable">Off</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="options-section">
+            <h2>🔧 Debug</h2>
+            <button id="debug-toggle-button" class="menu-button-lg">Debug Mode: <span id="debug-status">OFF</span></button>
         </div>
         
-        <button class="menu-button-lg back-button" onclick="goToMenu()">Back to Menu</button>
+        <button class="menu-button-lg back-button" onclick="hideOptionsOverlay()">Back to Game</button>
     </div>
 
     <!-- Fire Game Screen -->
     <div id="fire-game-screen" class="game-screen hidden">
-        <div id="fire-game-title" class="title">Fire Rescue!</div>
-        <div id="fire-timer-settings" class="timer-settings" style="display: none;">
-            <h3>Timer Settings</h3>
-            <button id="timer-1min" class="timer-option">1 Minute</button>
-            <button id="timer-5min" class="timer-option">5 Minutes</button>
-            <button id="timer-manual" class="timer-option">Manual End</button>
-        </div>
-        <div id="fire-timer-display" class="timer-display" style="display: none;">
-            Time: <span id="fire-timer-text">--:--</span>
-            <button id="end-now-button" style="display: none;">End Now</button>
+        <div id="fire-top-bar" class="top-bar">
+            <div class="top-bar-left">
+                <button class="top-bar-button" onclick="showOptionsOverlay()">⚙️ Options</button>
+                <button id="timer-1min-btn" class="top-bar-button">1 Min</button>
+                <button id="timer-5min-btn" class="top-bar-button">5 Min</button>
+            </div>
+            <div id="fire-game-title" class="top-bar-title">
+                <span id="fire-truck-icon" class="fire-truck-horn">🚒</span>
+                <span id="fire-rescue-text">Fire Rescue!</span>
+            </div>
+            <div id="fire-game-status" class="top-bar-status" style="display: none;">
+                <button id="mute-button" class="top-bar-button">🔇</button>
+                <button id="end-fire-rescue-button-status" class="top-bar-button" onclick="endFireRescue()">🏆 Show Score</button>
+                <span class="top-bar-timer">Time: <span id="fire-timer-text">--:--</span></span>
+                <button id="end-now-button" class="top-bar-button" style="display: none;">End Now</button>
+            </div>
         </div>
         <div id="fire-developer-controls" class="developer-controls" style="display: none;">
             <h4>Developer Mode</h4>
@@ -72,17 +73,6 @@
         </div>
         <canvas id="fireGameCanvas"></canvas>
         <div id="fire-game-instructions" class="instructions">Click the hose on the truck!</div>
-        <button class="menu-button" onclick="goToMenu()">Menu</button>
-        <button id="end-fire-rescue-button" class="end-level-button" onclick="endFireRescue()">🏆 Show Scoreboard</button>
-        <div id="sound-controls">
-            <label for="sound-select">Water Sound:</label>
-            <select id="sound-select">
-                <option value="white" selected>Default</option>
-                <option value="pink">Deeper</option>
-                <option value="brown">Rumbly</option>
-                <option value="disable">Off</option>
-            </select>
-        </div>
     </div>
 
     <!-- Firefighter Scoreboard -->
@@ -131,54 +121,10 @@
         
         <div class="scoreboard-actions">
             <button class="menu-button-lg" onclick="restartFireRescue()">🔥 Play Again</button>
-            <button class="menu-button" onclick="goToMenu()">📱 Main Menu</button>
+            <button class="menu-button" onclick="restartFireRescue()">🔥 New Game</button>
         </div>
     </div>
 
-    <!-- Developer Reference Screen -->
-    <div id="developer-reference-screen" class="game-screen hidden">
-        <div class="title">Developer Reference - Fire Rescue Elements</div>
-        <div style="position: absolute; top: 80px; left: 10px; right: 10px; bottom: 80px; background: rgba(255,255,255,0.95); border-radius: 10px; padding: 15px; overflow-y: auto;">
-            <div style="display: flex; gap: 20px; height: 100%;">
-                <div style="flex: 2;">
-                    <canvas id="referenceCanvas" style="width: 100%; height: 600px; border: 2px solid #34495e; border-radius: 5px; background: #87CEEB;"></canvas>
-                    <div style="margin-top: 10px; text-align: center;">
-                        <button id="ref-show-truck" class="timer-option">🚒 Truck</button>
-                        <button id="ref-show-hydrant" class="timer-option">🚰 Hydrant</button>
-                        <button id="ref-show-buildings" class="timer-option">🏢 Buildings</button>
-                        <button id="ref-show-all" class="timer-option">📊 All Elements</button>
-                        <button id="ref-toggle-measurements" class="timer-option">📏 Toggle Measurements</button>
-                    </div>
-                </div>
-                <div style="flex: 1; background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; overflow-y: auto;">
-                    <h3 style="margin-top: 0;">Element Details</h3>
-                    <div id="reference-details">
-                        <p><strong>Fire Truck:</strong></p>
-                        <p>• Main Body: 120×80px at (100, y-180)</p>
-                        <p>• Cab: 40×30px at (+80, -20 from body)</p>
-                        <p>• Wheels: 15px radius at (+25, +95)</p>
-                        <p>• Hose Coil: 20px radius at (+50, +30)</p>
-                        <p>• Port: 12px radius at (+100, +40)</p>
-                        <br>
-                        <p><strong>Hydrant:</strong></p>
-                        <p>• Main Body: 40×60px at (350, y-160)</p>
-                        <p>• Top Cap: 25px radius</p>
-                        <p>• Port: 12px radius at (+0, +30)</p>
-                        <p>• Valve: 30×15px at (-20, -20)</p>
-                        <br>
-                        <p><strong>Ladder Platform:</strong></p>
-                        <p>• Size: 60×8px</p>
-                        <p>• Position: truck.x+20, truck.y-5</p>
-                        <br>
-                        <p><strong>Nozzle:</strong></p>
-                        <p>• Size: 40×16px</p>
-                        <p>• Position: on ladder center, -8px up</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <button class="menu-button" onclick="goToMenu()">Back to Menu</button>
-    </div>
 
     <!-- Animal Rescue Screen removed - see FUTURE_LEVELS.md -->
 
@@ -189,10 +135,8 @@
             <button id="report-play-again-button" class="menu-button-lg" style="font-size: 1.5rem;">Play Again</button>
         </div>
     </div>
-
-    <div id="music-controls" style="position: absolute; top: 15px; right: 15px; z-index: 50;">
-        <button id="mute-button" style="background-color: #f39c12; color: white; padding: 5px 10px; border-radius: 10px; font-size: 1.5rem; border: 2px solid white;">🔇</button>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="js/SoundManager.js"></script>
     <script src="js/GameLevel.js"></script>

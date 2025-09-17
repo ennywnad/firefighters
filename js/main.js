@@ -1,67 +1,21 @@
-// --- Global Navigation & Scene Management ---
+// --- Fire Rescue Game Management ---
 
-// Level Progression - Currently only Fire Rescue is active
-const levelOrder = ['fire'];
-
-// Debug mode toggle
-let debugMode = localStorage.getItem('firefighterDebugMode') === 'true';
-
-
-function getUnlockedLevel() {
-    if (debugMode) return levelOrder.length; // Unlock all levels in debug mode
-    return parseInt(localStorage.getItem('firefighterUnlockedLevel') || '1', 10);
-}
-
-function unlockLevel(levelNumber) {
-    const currentUnlocked = getUnlockedLevel();
-    if (levelNumber > currentUnlocked) {
-        localStorage.setItem('firefighterUnlockedLevel', levelNumber);
-    }
-}
-
-function updateLevelButtons() {
-    const unlockedLevel = getUnlockedLevel();
-    document.querySelectorAll('.level-button').forEach(button => {
-        const levelName = button.dataset.level;
-        const levelNumber = levelOrder.indexOf(levelName) + 1;
-        if (levelNumber <= unlockedLevel) {
-            button.disabled = false;
-            button.classList.remove('locked');
-        } else {
-            button.disabled = true;
-            button.classList.add('locked');
-        }
-    });
-    
-}
+// Global reference to the current game instance for debug synchronization
+let currentFireGame = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    updateLevelButtons();
-    // Set default scene selection
-    const defaultSceneButton = document.querySelector('[data-scene="day"]');
-    if (defaultSceneButton) {
-        defaultSceneButton.classList.add('selected');
-    }
-    
-    document.getElementById('reset-progress-button').addEventListener('click', () => {
-        localStorage.removeItem('firefighterUnlockedLevel');
-        updateLevelButtons();
-    });
-    
-    // Developer Reference button
-    document.getElementById('developer-reference-button').addEventListener('click', () => {
-        menuScreen.classList.add('hidden');
-        const developerReference = new DeveloperReference();
-        developerReference.start();
-        toggleBackgroundMusic(false);
-    });
-    
+    // Set up voice controls in options menu
+    setupVoiceControls();
+
+    // Set up fire truck click handler
+    setupFireTruckClick();
+
+    // Start Fire Rescue game immediately
+    startFireRescueGame();
 });
 
-const menuScreen = document.getElementById('menu-screen');
 const optionsScreen = document.getElementById('options-screen');
 const fireGameScreen = document.getElementById('fire-game-screen');
-// Other level screens removed - only Fire Rescue active
 const muteButton = document.getElementById('mute-button');
 const heroReportScreen = document.getElementById('hero-report-screen');
 const heroReportMessage = document.getElementById('hero-report-message');
@@ -72,71 +26,52 @@ muteButton.addEventListener('click', () => {
     toggleBackgroundMusic();
 });
 
-reportMenuButton.addEventListener('click', goToMenu);
+reportMenuButton.addEventListener('click', startFireRescueGame);
 reportPlayAgainButton.addEventListener('click', () => {
     heroReportScreen.classList.add('hidden');
-    if (chosenLevel === 'fire') {
-        startFireGame();
-    }
-    // Other levels removed - see FUTURE_LEVELS.md
+    startFireRescueGame();
 });
 
 let activeGameIntervals = [];
-let chosenLevel = null;
 
-const scenes = {
-    day: { sky: '#87CEEB', ground: '#2ECC71', building: '#bdc3c7', treeTrunk: '#8D6E63', treeLeaves: '#4CAF50', special: null },
-    night: { sky: '#2c3e50', ground: '#27ae60', building: '#95a5a6', treeTrunk: '#6D4C41', treeLeaves: '#2c6b2f', special: 'stars' },
-    autumn: { sky: '#d35400', ground: '#A1887F', building: '#bdc3c7', treeTrunk: '#8D6E63', treeLeaves: '#e67e22', special: 'leaves' },
-    winter: { sky: '#a0d2eb', ground: '#ffffff', building: '#bdc3c7', treeTrunk: '#8D6E63', treeLeaves: '#e0f7fa', special: 'snow' }
-};
-let currentScene = scenes.day;
-let sceneParticles = [];
+function startFireRescueGame() {
+    // Clear any existing game intervals
+    activeGameIntervals.forEach(clearInterval);
+    activeGameIntervals = [];
 
-document.querySelectorAll('.level-button').forEach(button => {
-    button.addEventListener('click', () => {
-        chosenLevel = button.dataset.level;
-        menuScreen.classList.add('hidden');
-        
-        // Only Fire Rescue level is currently active
-        currentScene = scenes.day;
-        if (chosenLevel === 'fire') {
-            const fireGame = new FireRescueLevel();
-            fireGame.start();
-        }
-        toggleBackgroundMusic(true);
-    });
-});
+    // Hide all screens except Fire Rescue
+    const allScreens = document.querySelectorAll('.game-screen');
+    allScreens.forEach(screen => screen.classList.add('hidden'));
 
-// Options menu handling
-document.getElementById('options-button').addEventListener('click', () => {
-    menuScreen.classList.add('hidden');
-    optionsScreen.classList.remove('hidden');
-    updateDebugStatus();
-});
+    // Start the Fire Rescue game
+    currentFireGame = new FireRescueLevel();
+    currentFireGame.start();
 
-// Scene selection in options menu
-document.querySelectorAll('.scene-button').forEach(button => {
-    button.addEventListener('click', () => {
-        currentScene = scenes[button.dataset.scene];
-        // Visual feedback - highlight selected scene
-        document.querySelectorAll('.scene-button').forEach(b => b.classList.remove('selected'));
-        button.classList.add('selected');
-    });
-});
+    // Set up debug sync callback
+    currentFireGame.onDebugModeChange = updateDebugButtonFromGame;
 
-// Debug toggle functionality
+    // Initialize debug button state
+    updateDebugButtonFromGame();
+
+    toggleBackgroundMusic(true);
+}
+
+// Debug toggle functionality - connects to actual game debug mode
 document.getElementById('debug-toggle-button').addEventListener('click', () => {
-    debugMode = !debugMode;
-    localStorage.setItem('firefighterDebugMode', debugMode.toString());
-    updateDebugStatus();
-    updateLevelButtons();
+    if (currentFireGame) {
+        currentFireGame.toggleDeveloperMode();
+    }
 });
 
-function updateDebugStatus() {
+function updateDebugButtonFromGame() {
     const statusSpan = document.getElementById('debug-status');
     const button = document.getElementById('debug-toggle-button');
-    if (debugMode) {
+
+    if (!currentFireGame) return;
+
+    const isDebugOn = currentFireGame.developerMode;
+
+    if (isDebugOn) {
         statusSpan.textContent = 'ON';
         statusSpan.style.color = '#27ae60';
         button.style.backgroundColor = '#27ae60';
@@ -145,38 +80,33 @@ function updateDebugStatus() {
         statusSpan.style.color = '#e74c3c';
         button.style.backgroundColor = '#e74c3c';
     }
+
+    // Save to localStorage for persistence
+    localStorage.setItem('firefighterDebugMode', isDebugOn.toString());
 }
 
 function showHeroReport(message) {
-    const currentLevelNumber = levelOrder.indexOf(chosenLevel) + 1;
-    if (currentLevelNumber > 0) {
-        unlockLevel(currentLevelNumber + 1);
-    }
-
     heroReportMessage.textContent = message;
     const fireGameScreen = document.getElementById('fire-game-screen');
     if (fireGameScreen) fireGameScreen.classList.add('hidden');
-    // Only Fire Rescue screen needs to be hidden
-    
+
     heroReportScreen.classList.remove('hidden');
     toggleBackgroundMusic(false);
 }
 
-function goToMenu() {
-    // Clear all intervals and animation frames
-    activeGameIntervals.forEach(clearInterval);
-    activeGameIntervals = [];
-    
-    // Cancel all animation frames
-    if (window.fireGameAnimationId) cancelAnimationFrame(window.fireGameAnimationId);
-    // Other level animations removed - only Fire Rescue active
+function showOptionsOverlay() {
+    // Show options screen over the game
+    optionsScreen.classList.remove('hidden');
+}
 
-    // Hide all game screens
-    const allScreens = document.querySelectorAll('.game-screen');
-    allScreens.forEach(screen => screen.classList.add('hidden'));
-    
-    // Show menu screen
-    menuScreen.classList.remove('hidden');
+function hideOptionsOverlay() {
+    // Hide options screen to return to game
+    optionsScreen.classList.add('hidden');
+}
+
+function goToMenu() {
+    // Simply restart the Fire Rescue game
+    startFireRescueGame();
 }
 
 // Utility function to switch between screens
@@ -309,6 +239,82 @@ function startFireGame() {
     const gameScreen = document.getElementById('fire-game-screen');
     const fireGame = new FireRescueLevel(canvas, gameScreen);
     fireGame.start();
+}
+
+// Voice control setup function
+function setupVoiceControls() {
+    if (!window.voiceGuide) return;
+
+    const checkbox = document.getElementById('voice-enabled-checkbox');
+    const volumeSlider = document.getElementById('voice-volume-slider');
+    const speedSlider = document.getElementById('voice-speed-slider');
+    const pitchSlider = document.getElementById('voice-pitch-slider');
+    const testButton = document.getElementById('test-voice-button');
+
+    if (checkbox) {
+        checkbox.checked = window.voiceGuide.getEnabled();
+        checkbox.addEventListener('change', () => {
+            window.voiceGuide.setEnabled(checkbox.checked);
+        });
+    }
+
+    if (volumeSlider) {
+        volumeSlider.value = window.voiceGuide.volume;
+        volumeSlider.addEventListener('input', () => {
+            window.voiceGuide.volume = parseFloat(volumeSlider.value);
+            window.voiceGuide.saveSettings();
+        });
+    }
+
+    if (speedSlider) {
+        speedSlider.value = window.voiceGuide.rate;
+        speedSlider.addEventListener('input', () => {
+            window.voiceGuide.rate = parseFloat(speedSlider.value);
+            window.voiceGuide.saveSettings();
+        });
+    }
+
+    if (pitchSlider) {
+        pitchSlider.value = window.voiceGuide.pitch;
+        pitchSlider.addEventListener('input', () => {
+            window.voiceGuide.pitch = parseFloat(pitchSlider.value);
+            window.voiceGuide.saveSettings();
+        });
+    }
+
+    if (testButton) {
+        testButton.addEventListener('click', () => {
+            window.voiceGuide.testVoice("This is a test of the voice guidance system for Fire Rescue!");
+        });
+    }
+}
+
+function restartFireRescue() {
+    startFireRescueGame();
+}
+
+// Fire truck click handler
+function setupFireTruckClick() {
+    const fireTruckIcon = document.getElementById('fire-truck-icon');
+    let hasRolledOff = false;
+
+    if (fireTruckIcon) {
+        // Wait for the initial animation to complete before enabling clicks
+        setTimeout(() => {
+            fireTruckIcon.addEventListener('click', () => {
+                if (!hasRolledOff) {
+                    hasRolledOff = true;
+                    fireTruckIcon.classList.add('rolling-off');
+
+                    // After the roll-off animation completes, reset for next time
+                    setTimeout(() => {
+                        fireTruckIcon.classList.remove('rolling-off');
+                        hasRolledOff = false;
+                    }, 3000); // Match the truckRollOff animation duration
+                }
+            });
+        }, 4000); // Wait for truckCrashIn animation to complete
+    }
 }
 
 // Other level start functions removed - see FUTURE_LEVELS.md for concepts

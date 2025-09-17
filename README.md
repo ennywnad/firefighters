@@ -2,7 +2,7 @@
 
 **An interactive, educational browser game for toddlers featuring firefighting heroes!**
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
 [![Age](https://img.shields.io/badge/age-2--5%20years-orange.svg)]()
 
@@ -102,6 +102,12 @@ No build process required - it's that simple!
 
 ## 📝 Version History
 
+- **v1.3.0** - 🎨 **UI/UX IMPROVEMENTS & INTERACTIVE FEATURES**
+  - Fire Rescue: Streamlined interface with auto-start and simplified timer controls
+  - Enhanced fire truck animation: Now drives in from right and crashes through title text
+  - Interactive fire truck: Click to watch it roll off screen after loading
+  - Improved options menu: Cleaner layout with better visual hierarchy
+  - Timer simplification: Removed popup, added convenient top-bar timer buttons
 - **v1.2.0** - 🎮 **LEVEL ENHANCEMENTS**
   - Animal Rescue: Implemented drag-and-drop truck positioning and added more interactive steps.
   - Truck Building: Enlarged module UI and added particle effects for better feedback.

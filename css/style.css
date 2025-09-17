@@ -15,17 +15,31 @@ body {
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
 }
-.game-screen {
+
+#game-container {
     position: relative;
     width: 100%;
     max-width: 800px;
     height: 100%;
     max-height: 600px;
+}
+
+.game-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: #87CEEB;
     border-radius: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     overflow: hidden;
     cursor: pointer;
+}
+
+/* Ensure options screen appears on top */
+#options-screen {
+    z-index: 300;
 }
 canvas {
     display: block;
@@ -85,16 +99,17 @@ canvas {
 
 .timer-display {
     position: absolute;
-    top: 80px;
-    right: 20px;
+    top: 10px;
+    right: 15px;
     background: rgba(255, 255, 255, 0.9);
-    border-radius: 10px;
-    padding: 10px 15px;
-    font-size: 1.3rem;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 1rem;
     font-weight: bold;
     color: #2c3e50;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     z-index: 100;
+    backdrop-filter: blur(5px);
 }
 
 #end-now-button {
@@ -321,6 +336,8 @@ canvas {
     overflow-y: auto;
     padding: 20px;
     gap: 12px;
+    position: relative;
+    z-index: 200;
 }
 .menu-title {
     font-size: 4.5rem;
@@ -386,19 +403,20 @@ canvas {
 /* End Level Button */
 .end-level-button {
     position: absolute;
-    top: 80px;
-    right: 20px;
-    font-size: 1.2rem;
+    top: 10px;
+    right: 120px;
+    font-size: 1rem;
     background-color: #27ae60;
     color: white;
-    padding: 8px 15px;
-    border-radius: 10px;
+    padding: 6px 12px;
+    border-radius: 8px;
     border: 2px solid white;
-    box-shadow: 0 3px 0 #229954;
+    box-shadow: 0 2px 0 #229954;
     transition: all 0.1s ease-in-out;
     cursor: pointer;
     font-family: 'Bangers', cursive;
     z-index: 20;
+    backdrop-filter: blur(5px);
 }
 
 .end-level-button:hover {
@@ -651,28 +669,34 @@ canvas {
 /* --- Shared In-Game UI --- */
 .title {
     position: absolute;
-    top: 20px;
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
     color: #FFD700;
-    font-size: 3rem;
-    text-shadow: 3px 3px 0 #c0392b, -1px -1px 0 #c0392b, 1px -1px 0 #c0392b, -1px 1px 0 #c0392b, 1px 1px 0 #c0392b;
+    font-size: 2rem;
+    text-shadow: 2px 2px 0 #c0392b, -1px -1px 0 #c0392b, 1px -1px 0 #c0392b, -1px 1px 0 #c0392b, 1px 1px 0 #c0392b;
     z-index: 10;
     pointer-events: none;
+    background: rgba(0,0,0,0.3);
+    padding: 5px 15px;
+    border-radius: 15px;
+    backdrop-filter: blur(5px);
 }
 .instructions {
     position: absolute;
-    top: 85px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     color: white;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 5px 15px;
-    border-radius: 10px;
-    font-size: 1.2rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 6px 16px;
+    border-radius: 15px;
+    font-size: 1rem;
     text-align: center;
     z-index: 10;
     pointer-events: none;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .menu-button {
     position: absolute;
@@ -718,6 +742,182 @@ canvas {
     0% { transform: translateX(-50%) scale(1); }
     50% { transform: translateX(-50%) scale(1.05); }
     100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Top Bar - spans full width at top of screen */
+.top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    z-index: 100;
+    font-family: 'Bangers', cursive;
+}
+
+.top-bar-button {
+    background: none;
+    border: none;
+    color: #FFD700;
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    text-shadow: 2px 2px 0 #c0392b, -1px -1px 0 #c0392b, 1px -1px 0 #c0392b, -1px 1px 0 #c0392b, 1px 1px 0 #c0392b;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    padding: 6px 12px;
+    border-radius: 8px;
+}
+
+.top-bar-button:hover {
+    transform: scale(1.05);
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.top-bar-title {
+    color: #FFD700;
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+    text-shadow: 2px 2px 0 #c0392b, -1px -1px 0 #c0392b, 1px -1px 0 #c0392b, -1px 1px 0 #c0392b, 1px 1px 0 #c0392b;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.top-bar-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.top-bar-timer {
+    color: #FFD700;
+    font-family: 'Bangers', cursive;
+    font-size: 1rem;
+    text-shadow: 2px 2px 0 #c0392b, -1px -1px 0 #c0392b, 1px -1px 0 #c0392b, -1px 1px 0 #c0392b, 1px 1px 0 #c0392b;
+    font-weight: bold;
+}
+
+/* Fire truck horn animation */
+.fire-truck-horn {
+    display: inline-block;
+    margin-right: 10px;
+    animation: truckCrashIn 4s ease-out;
+    position: relative;
+    z-index: 20;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.fire-truck-horn:hover {
+    transform: scale(1.1);
+}
+
+.fire-truck-horn.rolling-off {
+    animation: truckRollOff 3s ease-in forwards;
+    pointer-events: none;
+}
+
+@keyframes truckCrashIn {
+    0% {
+        transform: translateX(300px);
+        opacity: 0;
+    }
+    25% {
+        transform: translateX(150px);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(50px);
+        opacity: 1;
+    }
+    65% {
+        transform: translateX(0px) scale(1.5);
+        opacity: 1;
+    }
+    75% {
+        transform: translateX(-10px) scale(1.2);
+        opacity: 1;
+    }
+    85% {
+        transform: translateX(5px) scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(0px) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes truckRollOff {
+    0% {
+        transform: translateX(0px) scale(1);
+        opacity: 1;
+    }
+    20% {
+        transform: translateX(-50px) scale(0.9);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(-150px) scale(0.8);
+        opacity: 0.8;
+    }
+    80% {
+        transform: translateX(-300px) scale(0.6);
+        opacity: 0.4;
+    }
+    100% {
+        transform: translateX(-500px) scale(0.4);
+        opacity: 0;
+    }
+}
+
+#fire-rescue-text {
+    display: inline-block;
+    animation: textCrashEffect 4s ease-out;
+    position: relative;
+}
+
+@keyframes textCrashEffect {
+    0% {
+        opacity: 1;
+        transform: translateX(0px) scale(1);
+    }
+    60% {
+        opacity: 1;
+        transform: translateX(0px) scale(1);
+    }
+    65% {
+        opacity: 1;
+        transform: translateX(20px) scale(0.9) rotateZ(-3deg);
+    }
+    70% {
+        opacity: 1;
+        transform: translateX(-15px) scale(1.1) rotateZ(2deg);
+    }
+    75% {
+        opacity: 1;
+        transform: translateX(10px) scale(0.95) rotateZ(-1deg);
+    }
+    85% {
+        opacity: 1;
+        transform: translateX(-5px) scale(1.05) rotateZ(1deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0px) scale(1) rotateZ(0deg);
+    }
 }
 
 /* --- Animal Rescue Specific --- */
@@ -796,8 +996,9 @@ canvas {
 .options-section {
     margin: 30px 0;
     padding: 20px;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.4);
     border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .options-section h2 {

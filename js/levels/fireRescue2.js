@@ -23,15 +23,22 @@ class FireRescueLevel {
         this.timerEnded = false;
         
         // Developer mode properties
-        this.developerMode = false;
+        this.developerMode = localStorage.getItem('firefighterDebugMode') === 'true';
         this.showTruckMeasurements = false;
         this.showHydrantMeasurements = false;
         this.showBuildingMeasurements = false;
         this.showCoordinates = false;
+
+        // Callback for syncing with options menu
+        this.onDebugModeChange = null;
         
         // Audio
         this.actionSynth = new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination();
         this.waterSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0 } }).toDestination();
+        this.hornSynth = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.5 }
+        }).toDestination();
         
         // Game objects with fixed positions
         this.truck = {
@@ -104,19 +111,15 @@ class FireRescueLevel {
     }
     
     setupTimerControls() {
-        const timer1MinButton = document.getElementById('timer-1min');
-        const timer5MinButton = document.getElementById('timer-5min');
-        const timerManualButton = document.getElementById('timer-manual');
+        const timer1MinButton = document.getElementById('timer-1min-btn');
+        const timer5MinButton = document.getElementById('timer-5min-btn');
         const endNowButton = document.getElementById('end-now-button');
-        
+
         if (timer1MinButton) {
             timer1MinButton.addEventListener('click', () => this.setTimerMode('1min'));
         }
         if (timer5MinButton) {
             timer5MinButton.addEventListener('click', () => this.setTimerMode('5min'));
-        }
-        if (timerManualButton) {
-            timerManualButton.addEventListener('click', () => this.setTimerMode('manual'));
         }
         if (endNowButton) {
             endNowButton.addEventListener('click', () => this.endGameNow());
@@ -125,13 +128,23 @@ class FireRescueLevel {
     
     setTimerMode(mode) {
         this.timerMode = mode;
-        const timerSettings = document.getElementById('fire-timer-settings');
-        const timerDisplay = document.getElementById('fire-timer-display');
+        const statusBar = document.getElementById('fire-game-status');
         const endNowButton = document.getElementById('end-now-button');
-        
-        if (timerSettings) timerSettings.style.display = 'none';
-        if (timerDisplay) timerDisplay.style.display = 'block';
-        
+        const timer1MinButton = document.getElementById('timer-1min-btn');
+        const timer5MinButton = document.getElementById('timer-5min-btn');
+
+        if (statusBar) statusBar.style.display = 'flex';
+
+        // Update button visual feedback
+        if (timer1MinButton) {
+            timer1MinButton.style.backgroundColor = mode === '1min' ? '#27ae60' : '';
+            timer1MinButton.style.color = mode === '1min' ? 'white' : '';
+        }
+        if (timer5MinButton) {
+            timer5MinButton.style.backgroundColor = mode === '5min' ? '#27ae60' : '';
+            timer5MinButton.style.color = mode === '5min' ? 'white' : '';
+        }
+
         switch (mode) {
             case '1min':
                 this.timerDuration = 60000; // 1 minute
@@ -144,11 +157,11 @@ class FireRescueLevel {
                 if (endNowButton) endNowButton.style.display = 'inline-block';
                 break;
         }
-        
+
         this.timerStartTime = Date.now();
         this.timerEnded = false;
         this.updateTimerDisplay();
-        
+
         // Start the actual gameplay
         this.startGameplay();
     }
@@ -180,11 +193,11 @@ class FireRescueLevel {
     toggleDeveloperMode() {
         this.developerMode = !this.developerMode;
         const devControls = document.getElementById('fire-developer-controls');
-        
+
         if (devControls) {
             devControls.style.display = this.developerMode ? 'block' : 'none';
         }
-        
+
         // Reset all measurement toggles when entering developer mode
         if (this.developerMode) {
             this.showTruckMeasurements = false;
@@ -192,6 +205,14 @@ class FireRescueLevel {
             this.showBuildingMeasurements = false;
             this.showCoordinates = false;
             this.updateDeveloperButtons();
+        }
+
+        // Save to localStorage
+        localStorage.setItem('firefighterDebugMode', this.developerMode.toString());
+
+        // Notify options menu to update button state
+        if (this.onDebugModeChange) {
+            this.onDebugModeChange();
         }
     }
     
@@ -222,13 +243,21 @@ class FireRescueLevel {
             { id: 'dev-toggle-buildings', active: this.showBuildingMeasurements },
             { id: 'dev-toggle-coords', active: this.showCoordinates }
         ];
-        
+
         buttons.forEach(({ id, active }) => {
             const btn = document.getElementById(id);
             if (btn) {
                 btn.classList.toggle('active', active);
             }
         });
+    }
+
+    playFireTruckHorn() {
+        // Play a fire truck horn sound sequence
+        setTimeout(() => this.hornSynth.triggerAttackRelease('Bb3', '4n'), 0);
+        setTimeout(() => this.hornSynth.triggerAttackRelease('F3', '4n'), 200);
+        setTimeout(() => this.hornSynth.triggerAttackRelease('Bb3', '4n'), 500);
+        setTimeout(() => this.hornSynth.triggerAttackRelease('F3', '2n'), 700);
     }
     
     updateTimerDisplay() {
@@ -275,22 +304,27 @@ class FireRescueLevel {
         this.timerEnded = false;
         
         this.gameScreen.classList.remove('hidden');
-        
-        // Show timer settings and wait for selection
-        const timerSettings = document.getElementById('fire-timer-settings');
-        const timerDisplay = document.getElementById('fire-timer-display');
-        const endNowButton = document.getElementById('end-now-button');
-        
-        if (timerSettings) timerSettings.style.display = 'block';
-        if (timerDisplay) timerDisplay.style.display = 'none';
-        if (endNowButton) endNowButton.style.display = 'none';
+
+        // Play fire truck horn sound and animation
+        setTimeout(() => {
+            this.playFireTruckHorn();
+        }, 100);
+
+        // Auto-start with manual timer mode
+        this.setTimerMode('manual');
+
+        // Initialize developer controls visibility based on saved state
+        const devControls = document.getElementById('fire-developer-controls');
+        if (devControls) {
+            devControls.style.display = this.developerMode ? 'block' : 'none';
+        }
         
         this.resizeCanvas();
         // Double-check sizing after a moment
         setTimeout(() => this.resizeCanvas(), 50);
         
-        // Set instructions to choose timer
-        this.instructionText.textContent = 'Choose your timer setting above to begin!';
+        // Set initial instructions
+        this.instructionText.textContent = 'Click the hose on the truck!';
     }
     
     startGameplay() {
