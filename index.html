@@ -37,10 +37,56 @@
         </div>
 
         <div class="options-section">
+            <h2>🚒 Truck Style</h2>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="truck-style" value="classic" id="truck-classic-radio" checked>
+                    <span class="radio-text">🚒 Classic Truck</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="truck-style" value="detailed" id="truck-detailed-radio">
+                    <span class="radio-text">🚛 Detailed Truck</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="options-section">
+            <h2>💧 Hydrant Style</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <span style="color: white; font-size: 1.2rem;">Hydrant:</span>
+                <select id="hydrant-style-select" style="font-family: 'Bangers', cursive; background-color: #34495e; color: white; border: 2px solid #FFD700; border-radius: 5px; padding: 5px;">
+                    <option value="classic" selected>Classic</option>
+                    <option value="modern">Modern</option>
+                </select>
+            </div>
+        </div>
+        <div class="options-section">
+            <h2>🎮 Fun Options</h2>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="display: flex; align-items: center; color: white;">
+                    <input type="checkbox" id="double-spray-checkbox" style="margin-right: 8px; transform: scale(1.2);">
+                    <span>💧 Double-Sized Water Spray</span>
+                </label>
+                <label style="display: flex; align-items: center; color: white;">
+                    <input type="checkbox" id="slow-lights-checkbox" style="margin-right: 8px; transform: scale(1.2);">
+                    <span>🏢 Slower Office Lights</span>
+                </label>
+                <label style="display: flex; align-items: center; color: white;">
+                    <input type="checkbox" id="fire-spread-checkbox" style="margin-right: 8px; transform: scale(1.2);">
+                    <span>🔥 Fires Spawn More Fires</span>
+                </label>
+                <label style="display: flex; align-items: center; color: white;">
+                    <input type="checkbox" id="emergency-lights-checkbox" style="margin-right: 8px; transform: scale(1.2);">
+                    <span>🚨 Continuous Emergency Lights</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="options-section">
             <h2>🔧 Debug</h2>
             <button id="debug-toggle-button" class="menu-button-lg">Debug Mode: <span id="debug-status">OFF</span></button>
         </div>
-        
+
         <button class="menu-button-lg back-button" onclick="hideOptionsOverlay()">Back to Game</button>
     </div>
 

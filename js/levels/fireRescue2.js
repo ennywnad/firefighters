@@ -11,11 +11,28 @@ class FireRescueLevel {
         this.isSpraying = false;
         this.fires = [];
         this.waterDrops = [];
+        this.mistParticles = [];
+        this.puddles = [];
         this.firesExtinguished = 0;
         this.waterUsed = 0;
         this.totalFires = 0;
         this.gameStartTime = Date.now();
-        
+        this.gracePeriodDuration = 10000; // 10 seconds in milliseconds
+
+        // Truck entrance animation
+        this.truckEntranceComplete = false;
+        this.truckTargetX = 100; // Final position
+        this.truckStartX = -200; // Start off-screen to the left
+        this.truckSpeed = 3; // pixels per frame
+
+        // Truck style change animation
+        this.truckChanging = false;
+        this.truckBackingUp = false;
+        this.truckRollingIn = false;
+        this.emergencyLightsFlashing = false;
+        this.lightFlashTimer = 0;
+        this.pendingTruckStyleChange = false;
+
         // Timer properties
         this.timerMode = 'manual'; // 'manual', '1min', '5min'
         this.timerDuration = 0; // in milliseconds
@@ -29,22 +46,45 @@ class FireRescueLevel {
         this.showBuildingMeasurements = false;
         this.showCoordinates = false;
 
-        // Callback for syncing with options menu
+        // Truck style properties
+        this.truckStyle = localStorage.getItem('firefighterTruckStyle') || 'classic';
+        this.newTruckStyle = null; // For pending truck style changes
+        this.pendingTruckStyleChange = false;
+
+        // Hydrant style properties
+        this.hydrantStyle = localStorage.getItem('firefighterHydrantStyle') || 'classic';
+
+        // Fun options
+        this.doubleSpray = localStorage.getItem('firefighterDoubleSpray') === 'true';
+        this.slowLights = localStorage.getItem('firefighterSlowLights') === 'true';
+        this.fireSpread = localStorage.getItem('firefighterFireSpread') === 'true';
+        this.emergencyLights = localStorage.getItem('firefighterEmergencyLights') === 'true';
+
+        // Callbacks for syncing with options menu
         this.onDebugModeChange = null;
+        this.onTruckStyleChange = null;
         
-        // Audio
-        this.actionSynth = new Tone.Synth({ oscillator: { type: 'triangle' } }).toDestination();
-        this.waterSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0 } }).toDestination();
-        this.hornSynth = new Tone.Synth({
-            oscillator: { type: 'sawtooth' },
-            envelope: { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.5 }
+        // Audio - much gentler sounds
+        this.actionSynth = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.3 }
         }).toDestination();
+        this.actionSynth.volume.value = -12; // Quieter
+
+        this.waterSynth = this.createWaterSynth();
+        this.waterSynth.volume.value = -8; // Gentler water sound
+
+        this.hornSynth = new Tone.Synth({
+            oscillator: { type: 'triangle' }, // Gentler than sawtooth
+            envelope: { attack: 0.1, decay: 0.4, sustain: 0.2, release: 0.8 }
+        }).toDestination();
+        this.hornSynth.volume.value = -10; // Quieter horn
         
-        // Game objects with fixed positions
+        // Game objects with positions (truck starts off-screen, extended by ~1 inch)
         this.truck = {
-            x: 100, y: 400, width: 120, height: 80,
-            hoseCoil: { x: 150, y: 430, radius: 20 },
-            port: { x: 200, y: 440, radius: 12 }
+            x: this.truckStartX, y: 400, width: 145, height: 80,
+            hoseCoil: { x: this.truckStartX + 65, y: 430, radius: 20 },
+            port: { x: this.truckStartX + 115, y: 440, radius: 12 }
         };
         
         this.hydrant = {
@@ -64,6 +104,59 @@ class FireRescueLevel {
         this.setupTruckEquipment();
         
         this.init();
+        this.setupSoundControls();
+    }
+
+    createWaterSynth() {
+        const soundType = localStorage.getItem('waterSoundType') || 'white';
+
+        if (soundType === 'disable') {
+            // Create a silent synth
+            return new Tone.Gain(0).toDestination();
+        }
+
+        // Create gentler water sounds based on type
+        switch (soundType) {
+            case 'pink':
+                return new Tone.NoiseSynth({
+                    noise: { type: 'pink' },
+                    envelope: { attack: 0.05, decay: 0.3, sustain: 0.4, release: 0.5 }
+                }).toDestination();
+
+            case 'brown':
+                return new Tone.NoiseSynth({
+                    noise: { type: 'brown' },
+                    envelope: { attack: 0.08, decay: 0.4, sustain: 0.5, release: 0.8 }
+                }).toDestination();
+
+            default: // white
+                return new Tone.NoiseSynth({
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.03, decay: 0.2, sustain: 0.3, release: 0.4 }
+                }).toDestination();
+        }
+    }
+
+    setupSoundControls() {
+        const soundSelect = document.getElementById('sound-select');
+        if (soundSelect) {
+            // Set initial value from localStorage
+            const savedSound = localStorage.getItem('waterSoundType') || 'white';
+            soundSelect.value = savedSound;
+
+            // Handle sound changes
+            soundSelect.addEventListener('change', () => {
+                const newSoundType = soundSelect.value;
+                localStorage.setItem('waterSoundType', newSoundType);
+
+                // Recreate water synth with new sound type
+                if (this.waterSynth && this.waterSynth.dispose) {
+                    this.waterSynth.dispose();
+                }
+                this.waterSynth = this.createWaterSynth();
+                this.waterSynth.volume.value = -8;
+            });
+        }
     }
     
     setupScreen() {
@@ -215,6 +308,225 @@ class FireRescueLevel {
             this.onDebugModeChange();
         }
     }
+
+    setTruckStyle(newStyle) {
+        // Don't allow truck change during animations or active gameplay
+        if (this.truckChanging || this.isSpraying || !this.truckEntranceComplete) {
+            return;
+        }
+
+        // Only mark as pending if it's actually different from current style
+        if (newStyle !== this.truckStyle) {
+            this.pendingTruckStyleChange = true;
+            this.newTruckStyle = newStyle; // Store the target style
+        } else {
+            this.pendingTruckStyleChange = false;
+            this.newTruckStyle = null;
+        }
+
+        // Update radio button state immediately
+        if (this.onTruckStyleChange) {
+            this.onTruckStyleChange();
+        }
+    }
+
+    toggleTruckStyle() {
+        // Legacy method - switch to the other style
+        const newStyle = this.truckStyle === 'classic' ? 'detailed' : 'classic';
+        this.setTruckStyle(newStyle);
+    }
+
+    startTruckChangeAnimation() {
+        // Don't start if no change is pending
+        if (!this.pendingTruckStyleChange) {
+            return;
+        }
+
+        // Start the truck change animation
+        this.truckChanging = true;
+        this.truckBackingUp = true;
+        this.emergencyLightsFlashing = true;
+        this.lightFlashTimer = 0;
+        this.pendingTruckStyleChange = false;
+
+        // Completely reset game state
+        this.gameState = 'START';
+        this.isSpraying = false;
+        this.nozzle.attachedToTruck = false;
+        this.nozzle.x = 200;
+        this.nozzle.y = 300;
+        this.nozzle.angle = 0;
+        this.truckEntranceComplete = false; // Mark truck as not ready for interaction
+        this.instructionText.textContent = 'Switching trucks...';
+
+        // Clear any water effects
+        this.waterDrops = [];
+        this.mistParticles = [];
+    }
+
+    startTruckDriveAnimation() {
+        // Don't allow during animations or active gameplay
+        if (this.truckChanging || this.isSpraying || !this.truckEntranceComplete) {
+            return;
+        }
+
+        // Start the drive animation without changing truck style
+        this.truckChanging = true;
+        this.truckBackingUp = true;
+        this.emergencyLightsFlashing = true;
+        this.lightFlashTimer = 0;
+
+        // Reset game state
+        this.gameState = 'START';
+        this.isSpraying = false;
+        this.nozzle.attachedToTruck = false;
+        this.nozzle.x = 200;
+        this.nozzle.y = 300;
+        this.nozzle.angle = 0;
+        this.truckEntranceComplete = false;
+
+        // Clear any water effects
+        this.waterDrops = [];
+        this.mistParticles = [];
+    }
+
+    completeTruckStyleChange() {
+        // Change the truck style to the stored new style
+        if (this.newTruckStyle) {
+            this.truckStyle = this.newTruckStyle;
+            this.newTruckStyle = null;
+        } else {
+            // Fallback to toggle if no specific style was set
+            this.truckStyle = this.truckStyle === 'classic' ? 'detailed' : 'classic';
+        }
+
+        // Save to localStorage
+        localStorage.setItem('firefighterTruckStyle', this.truckStyle);
+
+        // Notify options menu to update button state
+        if (this.onTruckStyleChange) {
+            this.onTruckStyleChange();
+        }
+
+        // Start rolling in the new truck
+        this.truckBackingUp = false;
+        this.truckRollingIn = true;
+        this.truck.x = this.truckStartX;
+        this.truck.hoseCoil.x = this.truckStartX + 50;
+        this.truck.port.x = this.truckStartX + 100;
+        this.setupTruckEquipment();
+    }
+
+    completeTruckDriveAnimation() {
+        // Just drive back with the same truck (no style change)
+        this.truckBackingUp = false;
+        this.truckRollingIn = true;
+        this.truck.x = -300; // Start from further off screen
+        this.truck.hoseCoil.x = -300 + 50;
+        this.truck.port.x = -300 + 100;
+        this.setupTruckEquipment();
+    }
+
+    spreadFires() {
+        if (this.fires.length === 0 || this.fires.length >= 20) return; // Allow more fires (was 12)
+
+        // Find fires that are mature enough to spread (at full size and not being extinguished)
+        const matureFires = this.fires.filter(fire => !fire.isGrowing && fire.life > 70);
+        if (matureFires.length === 0) return;
+
+        // Pick a random mature fire to spread from
+        const sourceFire = matureFires[Math.floor(Math.random() * matureFires.length)];
+
+        // Initialize spread timer if not exists
+        if (!sourceFire.lastSpreadTime) {
+            sourceFire.lastSpreadTime = Date.now();
+        }
+
+        // Faster spreading: only 2 seconds between spreads (was 3)
+        if (Date.now() - sourceFire.lastSpreadTime < 2000) {
+            return;
+        }
+
+        // 70% chance of close spread, 30% chance of distant spread
+        const isCloseSpread = Math.random() < 0.7;
+
+        // Spread both horizontally and vertically
+        // Bias spread direction: 60% horizontal, 40% vertical
+        const isHorizontalSpread = Math.random() < 0.6;
+
+        let newX, newY;
+        if (isCloseSpread) {
+            // Close spread: fires spread to adjacent areas (20-60 pixels away)
+            if (isHorizontalSpread) {
+                const direction = Math.random() < 0.5 ? -1 : 1;
+                const distance = 20 + Math.random() * 40; // 20-60 pixels
+                newX = sourceFire.x + (direction * distance);
+                newY = sourceFire.y + (Math.random() - 0.5) * 20; // Very small vertical variation
+            } else {
+                const direction = Math.random() < 0.5 ? -1 : 1;
+                const distance = 20 + Math.random() * 40; // 20-60 pixels
+                newY = sourceFire.y + (direction * distance);
+                newX = sourceFire.x + (Math.random() - 0.5) * 20; // Very small horizontal variation
+            }
+        } else {
+            // Distant spread: embers jumping further (60-120 pixels)
+            if (isHorizontalSpread) {
+                const direction = Math.random() < 0.5 ? -1 : 1;
+                const distance = 60 + Math.random() * 60; // 60-120 pixels
+                newX = sourceFire.x + (direction * distance);
+                newY = sourceFire.y + (Math.random() - 0.5) * 40; // Some vertical variation
+            } else {
+                const direction = Math.random() < 0.5 ? -1 : 1;
+                const distance = 60 + Math.random() * 60; // 60-120 pixels
+                newY = sourceFire.y + (direction * distance);
+                newX = sourceFire.x + (Math.random() - 0.5) * 40; // Some horizontal variation
+            }
+        }
+
+        // Make sure new fire is within game bounds and on a building
+        if (newX < 50 || newX > this.canvas.width - 50 || newY < 50 || newY > this.canvas.height - 150) {
+            return;
+        }
+
+        // Check if new fire location is on a building
+        const isOnBuilding = this.buildings.some(building => {
+            return newX >= building.x &&
+                   newX <= building.x + building.width &&
+                   newY >= building.y &&
+                   newY <= building.y + building.height;
+        });
+
+        if (!isOnBuilding) {
+            return; // Don't spawn fires in empty space
+        }
+
+        // Reduced minimum distance: allow closer fires (30 pixels instead of 50)
+        const tooClose = this.fires.some(fire => {
+            return Math.hypot(fire.x - newX, fire.y - newY) < 30;
+        });
+
+        if (tooClose) {
+            return; // Don't spawn overlapping fires
+        }
+
+        // Create the new spreading fire
+        const targetSize = 20 + Math.random() * 12;
+        this.fires.push({
+            x: newX,
+            y: newY,
+            size: 0, // Start with size 0
+            targetSize: targetSize,
+            growthRate: targetSize / 60, // Grow to full size over 1 second (60fps * 1)
+            life: 100,
+            flicker: Math.random() * 10,
+            isGrowing: true,
+            spreadFrom: sourceFire // Track where it spread from
+        });
+        this.totalFires++;
+
+        // Update the source fire's spread timer
+        sourceFire.lastSpreadTime = Date.now();
+    }
     
     toggleTruckMeasurements() {
         this.showTruckMeasurements = !this.showTruckMeasurements;
@@ -310,7 +622,7 @@ class FireRescueLevel {
             this.playFireTruckHorn();
         }, 100);
 
-        // Auto-start with manual timer mode
+        // Auto-start with manual timer mode and begin gameplay immediately
         this.setTimerMode('manual');
 
         // Initialize developer controls visibility based on saved state
@@ -333,10 +645,19 @@ class FireRescueLevel {
         this.isSpraying = false;
         this.fires = [];
         this.waterDrops = [];
+        this.mistParticles = [];
+        this.puddles = [];
         this.firesExtinguished = 0;
         this.waterUsed = 0;
         this.totalFires = 0;
         this.gameStartTime = Date.now();
+
+        // Reset truck entrance animation
+        this.truckEntranceComplete = false;
+        this.truck.x = this.truckStartX;
+        this.truck.hoseCoil.x = this.truckStartX + 50;
+        this.truck.port.x = this.truckStartX + 100;
+
         this.nozzle.attachedToTruck = false;
         this.nozzle.x = 200;
         this.nozzle.y = 300;
@@ -351,7 +672,7 @@ class FireRescueLevel {
         window.currentFireRescueGame = this;
         
         // Reset instructions
-        this.instructionText.textContent = 'Click the hose on the truck!';
+        this.instructionText.textContent = 'Fire truck arriving on scene!';
         
         // Respawn initial fires
         this.spawnInitialFires();
@@ -429,45 +750,67 @@ class FireRescueLevel {
     }
     
     initializeWindows() {
-        // Create window objects with positions and lighting state
+        // Preserve existing window lighting states if windows already exist
+        const existingWindows = this.windows ? [...this.windows] : [];
         this.windows = [];
-        
+
+        let windowIndex = 0;
         this.buildings.forEach((building, buildingIndex) => {
             const windowWidth = 12;
             const windowHeight = 16;
             const windowSpacingX = Math.floor(building.width / Math.max(2, Math.floor(building.width / 25)));
             const windowSpacingY = 35;
-            
+
             for (let y = building.y + 25; y < building.y + building.height - 25; y += windowSpacingY) {
                 for (let x = building.x + 12; x < building.x + building.width - 12; x += windowSpacingX) {
+                    const existingWindow = existingWindows[windowIndex];
+
+                    // Realistic office lighting:
+                    // - 75% chance window is lit (most offices have lights on during emergencies)
+                    // - Only 20% of windows are "dynamic" (people moving, lights toggling)
+                    // - 80% stay static throughout the scene
+                    const isDynamic = Math.random() < 0.2;
+                    const initialLit = existingWindow ? existingWindow.isLit : Math.random() > 0.25;
+
                     this.windows.push({
                         x: x,
                         y: y,
                         width: windowWidth,
                         height: windowHeight,
-                        isLit: Math.random() > 0.5, // Start with random state
-                        nextChangeTime: Date.now() + Math.random() * 12000 + 4000 // Change in 4-16 seconds
+                        isLit: initialLit,
+                        isDynamic: isDynamic, // Only some windows change
+                        nextChangeTime: existingWindow ? existingWindow.nextChangeTime : Date.now() + Math.random() * 60000 + 30000 // 30-90 seconds
                     });
+                    windowIndex++;
                 }
             }
         });
     }
     
     spawnInitialFires() {
+        // Don't spawn fires during grace period
+        return;
+    }
+
+    spawnFiresAfterGrace() {
         // Make sure we have buildings before spawning fires
         if (this.buildings.length === 0) {
             console.warn('No buildings available for fire spawning');
             return;
         }
-        
+
         for (let i = 0; i < 3; i++) {
             const building = this.buildings[Math.floor(Math.random() * this.buildings.length)];
+            const targetSize = 25 + Math.random() * 15;
             const fire = {
                 x: building.x + building.width * 0.3 + Math.random() * building.width * 0.4,
                 y: building.y + Math.random() * 100, // Spawn higher up on buildings
-                size: 25 + Math.random() * 15,
+                size: 0, // Start with size 0
+                targetSize: targetSize, // Size it will grow to
+                growthRate: targetSize / 60, // Grow to full size over 1 second (60fps * 1)
                 life: 100,
-                flicker: Math.random() * 10
+                flicker: Math.random() * 10,
+                isGrowing: true
             };
             this.fires.push(fire);
             this.totalFires++;
@@ -477,23 +820,77 @@ class FireRescueLevel {
     
     spawnNewFire() {
         if (this.buildings.length === 0) return;
-        
+
         const building = this.buildings[Math.floor(Math.random() * this.buildings.length)];
+        const targetSize = 25 + Math.random() * 15;
         const fire = {
             x: building.x + building.width * 0.3 + Math.random() * building.width * 0.4,
             y: building.y + Math.random() * 100,
-            size: 25 + Math.random() * 15,
+            size: 0, // Start with size 0
+            targetSize: targetSize, // Size it will grow to
+            growthRate: targetSize / 60, // Grow to full size over 1 second (60fps * 1)
             life: 100,
-            flicker: Math.random() * 10
+            flicker: Math.random() * 10,
+            isGrowing: true
         };
         this.fires.push(fire);
         this.totalFires++;
     }
-    
+
+    createPuddle(x, y) {
+        // Only create puddles on valid surfaces
+        const groundLevel = this.canvas.height - 100;
+        const isOnGround = y >= groundLevel;
+
+        // Check if puddle is on a building surface
+        const isOnBuilding = this.buildings.some(building => {
+            return x >= building.x &&
+                   x <= building.x + building.width &&
+                   y >= building.y &&
+                   y <= building.y + building.height;
+        });
+
+        // Only create puddle if it's on ground or on a building
+        if (!isOnGround && !isOnBuilding) {
+            return;
+        }
+
+        // Check if there's already a puddle nearby (within 30 pixels)
+        const nearbyPuddle = this.puddles.find(puddle =>
+            Math.hypot(puddle.x - x, puddle.y - y) < 30
+        );
+
+        if (nearbyPuddle) {
+            // Grow existing puddle (no size limit, can cover entire street)
+            nearbyPuddle.maxSize += 3;
+            const maxOpacity = nearbyPuddle.isOnBuilding ? 0.45 : 0.9; // Half opacity for buildings
+            nearbyPuddle.opacity = Math.min(nearbyPuddle.opacity + 0.05, maxOpacity);
+        } else {
+            // Create new puddle
+            const maxSize = 20 + Math.random() * 15;
+            const baseFadeRate = 0.0005 / (maxSize / 25);
+            this.puddles.push({
+                x: x,
+                y: y,
+                size: 0,
+                maxSize: maxSize,
+                growthRate: 1.0, // Faster growth for more responsive feel
+                opacity: isOnBuilding ? 0.3 : 0.6, // Start lighter on buildings
+                fadeRate: isOnBuilding ? baseFadeRate * 2 : baseFadeRate, // Buildings dry twice as fast
+                isOnBuilding: isOnBuilding
+            });
+
+            // Limit number of puddles for performance
+            if (this.puddles.length > 30) {
+                this.puddles.shift(); // Remove oldest puddle
+            }
+        }
+    }
+
     handleClick(e) {
-        // Don't allow clicks until timer is selected
-        if (!this.timerStartTime) return;
-        
+        // Don't allow clicks until truck entrance is complete or during truck changing
+        if (!this.truckEntranceComplete || this.truckChanging) return;
+
         const pos = this.getMousePos(e);
         
         switch (this.gameState) {
@@ -533,6 +930,9 @@ class FireRescueLevel {
     }
     
     handleMouseMove(e) {
+        // Don't handle mouse moves during truck changing
+        if (this.truckChanging) return;
+
         this.mouse = this.getMousePos(e);
         if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
             this.updateNozzleAngle();
@@ -540,18 +940,30 @@ class FireRescueLevel {
     }
     
     handleMouseDown(e) {
+        // Don't handle mouse down during truck changing
+        if (this.truckChanging) return;
+
         if (this.gameState === 'READY_TO_SPRAY') {
             this.gameState = 'SPRAYING';
             this.isSpraying = true;
-            this.waterSynth.triggerAttack();
+            // Only trigger water sound if it's not disabled
+            if (this.waterSynth && this.waterSynth.triggerAttack) {
+                this.waterSynth.triggerAttack();
+            }
         }
     }
-    
+
     handleMouseUp() {
+        // Don't handle mouse up during truck changing
+        if (this.truckChanging) return;
+
         if (this.gameState === 'SPRAYING') {
             this.gameState = 'READY_TO_SPRAY';
             this.isSpraying = false;
-            this.waterSynth.triggerRelease();
+            // Only release water sound if it's not disabled
+            if (this.waterSynth && this.waterSynth.triggerRelease) {
+                this.waterSynth.triggerRelease();
+            }
         }
     }
     
@@ -582,11 +994,17 @@ class FireRescueLevel {
     updateWindows() {
         const now = Date.now();
         this.windows.forEach(window => {
-            if (now >= window.nextChangeTime) {
+            // Only update dynamic windows (the 20% that change)
+            if (window.isDynamic && now >= window.nextChangeTime) {
                 // Change the window state
                 window.isLit = !window.isLit;
-                // Set next change time (4-16 seconds from now) - half the frequency
-                window.nextChangeTime = now + Math.random() * 12000 + 4000;
+
+                // Set next change time - realistic office timing
+                if (this.slowLights) {
+                    window.nextChangeTime = now + Math.random() * 80000 + 40000; // 40-120 seconds (very slow)
+                } else {
+                    window.nextChangeTime = now + Math.random() * 60000 + 30000; // 30-90 seconds
+                }
             }
         });
     }
@@ -599,53 +1017,250 @@ class FireRescueLevel {
         
         // Update window lighting gradually
         this.updateWindows();
-        
-        // Occasionally spawn new fires during gameplay
-        if (Math.random() < 0.002 && this.fires.length < 5) { // Small chance each frame
+
+        // Handle truck entrance animation
+        if (!this.truckEntranceComplete && this.truck.x < this.truckTargetX) {
+            this.truck.x += this.truckSpeed;
+            this.truck.hoseCoil.x += this.truckSpeed;
+            this.truck.port.x += this.truckSpeed;
+
+            // Update ladder and nozzle positions if they exist
+            if (this.ladder && this.nozzle) {
+                this.setupTruckEquipment();
+            }
+
+            if (this.truck.x >= this.truckTargetX) {
+                this.truck.x = this.truckTargetX;
+                this.truck.hoseCoil.x = this.truckTargetX + 50;
+                this.truck.port.x = this.truckTargetX + 100;
+                this.truckEntranceComplete = true;
+                this.setupTruckEquipment();
+
+                // Update instructions when truck arrives
+                this.instructionText.textContent = 'Click the hose on the truck!';
+            }
+        }
+
+        // Handle truck style change animation
+        if (this.truckChanging) {
+            if (this.truckBackingUp) {
+                // Move truck backward off screen
+                const backupSpeed = this.truckSpeed * 4; // Much faster backup for dramatic effect
+                this.truck.x -= backupSpeed;
+                this.truck.hoseCoil.x -= backupSpeed;
+                this.truck.port.x -= backupSpeed;
+
+                // Also update ladder and nozzle positions
+                this.setupTruckEquipment();
+
+                // When truck is completely off screen, either change style or just drive back
+                if (this.truck.x <= -300) { // Go much further off screen
+                    if (this.newTruckStyle) {
+                        // We have a style change to make
+                        this.completeTruckStyleChange();
+                    } else {
+                        // Just a drive animation, return with same truck
+                        this.completeTruckDriveAnimation();
+                    }
+                }
+            } else if (this.truckRollingIn) {
+                // Roll new truck in (faster for dramatic effect)
+                const rollInSpeed = this.truckSpeed * 2;
+                this.truck.x += rollInSpeed;
+                this.truck.hoseCoil.x += rollInSpeed;
+                this.truck.port.x += rollInSpeed;
+
+                // Update ladder and nozzle positions
+                this.setupTruckEquipment();
+
+                if (this.truck.x >= this.truckTargetX) {
+                    this.truck.x = this.truckTargetX;
+                    this.truck.hoseCoil.x = this.truckTargetX + 50;
+                    this.truck.port.x = this.truckTargetX + 100;
+                    this.setupTruckEquipment();
+
+                    // End animation and reset game properly
+                    this.truckRollingIn = false;
+                    this.truckChanging = false;
+                    this.emergencyLightsFlashing = false;
+                    this.truckEntranceComplete = true;
+
+                    // Update instructions for new truck
+                    this.instructionText.textContent = 'Click the hose on the truck!';
+                }
+            }
+        }
+
+        // Update emergency lights flashing
+        if (this.emergencyLightsFlashing) {
+            this.lightFlashTimer++;
+        }
+
+        // Check if grace period has ended and spawn initial fires
+        const timeSinceStart = Date.now() - this.gameStartTime;
+        if (timeSinceStart >= this.gracePeriodDuration && this.fires.length === 0 && this.totalFires === 0) {
+            this.spawnFiresAfterGrace();
+            this.instructionText.textContent = 'Click the hose on the truck!';
+        }
+
+        // Occasionally spawn new fires during gameplay (only after grace period)
+        if (timeSinceStart >= this.gracePeriodDuration && Math.random() < 0.002 && this.fires.length < 5) {
             this.spawnNewFire();
+        }
+
+        // Fire spreading - fires spawn nearby fires if option enabled
+        // More aggressive spreading rate: check more frequently
+        if (this.fireSpread && timeSinceStart >= this.gracePeriodDuration && Math.random() < 0.008) {
+            this.spreadFires();
         }
         
         // Spawn water drops when spraying
         if (this.isSpraying && this.gameState === 'SPRAYING') {
-            for (let i = 0; i < 3; i++) {
+            // Main water stream - fewer but more powerful drops
+            for (let i = 0; i < 2; i++) {
                 this.waterDrops.push({
                     x: this.nozzle.x,
                     y: this.nozzle.y,
-                    vx: Math.cos(this.nozzle.angle) * (8 + Math.random() * 4),
-                    vy: Math.sin(this.nozzle.angle) * (8 + Math.random() * 4),
-                    life: 60
+                    vx: Math.cos(this.nozzle.angle) * (10 + Math.random() * 3),
+                    vy: Math.sin(this.nozzle.angle) * (10 + Math.random() * 3),
+                    life: 80,
+                    size: 4 + Math.random() * 2,
+                    isMist: false
                 });
                 this.waterUsed++; // Track water usage
-                
+
                 // Track water usage for scoreboard
                 if (window.firefighterScoreboard) {
                     window.firefighterScoreboard.recordWaterUsed(0.5); // Each water drop = 0.5 gallons
                 }
             }
+
+            // Regular mist particles - lighter, more affected by gravity
+            for (let i = 0; i < 4; i++) {
+                const spreadAngle = this.nozzle.angle + (Math.random() - 0.5) * 0.8; // More spread
+                const speed = 4 + Math.random() * 4; // Slower than main stream
+                this.mistParticles.push({
+                    x: this.nozzle.x + Math.cos(this.nozzle.angle) * 20, // Start a bit ahead
+                    y: this.nozzle.y + Math.sin(this.nozzle.angle) * 20,
+                    vx: Math.cos(spreadAngle) * speed,
+                    vy: Math.sin(spreadAngle) * speed,
+                    life: 40 + Math.random() * 20,
+                    size: 1 + Math.random() * 2,
+                    opacity: 0.4 + Math.random() * 0.4,
+                    type: 'light'
+                });
+            }
+
+            // Heavier mist below the main jet - more concentrated under the stream
+            for (let i = 0; i < 8; i++) {
+                // Bias the angle slightly downward from the main jet
+                const downwardBias = this.nozzle.angle + 0.3 + (Math.random() - 0.5) * 0.6;
+                const speed = 3 + Math.random() * 3; // Even slower
+                const startDistance = 25 + Math.random() * 15; // Start further out
+                this.mistParticles.push({
+                    x: this.nozzle.x + Math.cos(this.nozzle.angle) * startDistance,
+                    y: this.nozzle.y + Math.sin(this.nozzle.angle) * startDistance,
+                    vx: Math.cos(downwardBias) * speed,
+                    vy: Math.sin(downwardBias) * speed,
+                    life: 60 + Math.random() * 30, // Longer lasting
+                    size: 1.5 + Math.random() * 2.5, // Slightly larger
+                    opacity: 0.5 + Math.random() * 0.3,
+                    type: 'heavy'
+                });
+            }
         }
         
-        // Update water drops
+        // Update water drops with enhanced gravity
         this.waterDrops.forEach((drop, index) => {
             drop.x += drop.vx;
             drop.y += drop.vy;
-            drop.vy += 0.1; // gravity
+            drop.vy += 0.15; // Enhanced gravity for more realistic arc
             drop.life--;
-            
-            if (drop.life <= 0 || drop.y > this.canvas.height) {
+
+            // Check if water hits the ground
+            if (drop.y >= this.canvas.height - 100) {
+                this.createPuddle(drop.x, this.canvas.height - 100);
+                this.waterDrops.splice(index, 1);
+            } else if (drop.life <= 0) {
+                // When water drop expires (hits fire or disappears), create puddle where it lands
+                this.createPuddle(drop.x, Math.min(drop.y, this.canvas.height - 100));
+                this.waterDrops.splice(index, 1);
+            } else if (drop.y > this.canvas.height) {
                 this.waterDrops.splice(index, 1);
             }
         });
-        
+
+        // Update mist particles with different physics for heavy vs light mist
+        this.mistParticles.forEach((mist, index) => {
+            mist.x += mist.vx;
+            mist.y += mist.vy;
+
+            // Different gravity and air resistance based on mist type
+            if (mist.type === 'heavy') {
+                mist.vy += 0.06; // Slower fall than light mist
+                mist.vx *= 0.98; // More air resistance
+            } else {
+                mist.vy += 0.08; // Light mist falls a bit faster
+                mist.vx *= 0.99; // Less air resistance
+            }
+
+            mist.life--;
+            mist.opacity *= 0.985; // Slightly slower fade
+
+            // Remove mist particles when they fade or hit ground
+            if (mist.life <= 0 || mist.opacity < 0.1 || mist.y >= this.canvas.height - 100) {
+                // Mist doesn't create puddles, just disappears
+                this.mistParticles.splice(index, 1);
+            }
+        });
+
+        // Update puddles
+        this.puddles.forEach((puddle, index) => {
+            // Grow puddle if not at max size
+            if (puddle.size < puddle.maxSize) {
+                puddle.size += puddle.growthRate;
+                if (puddle.size > puddle.maxSize) {
+                    puddle.size = puddle.maxSize;
+                }
+            }
+
+            // Fade puddle over time
+            puddle.opacity -= puddle.fadeRate;
+
+            // Remove fully faded puddles
+            if (puddle.opacity <= 0) {
+                this.puddles.splice(index, 1);
+            }
+        });
+
         // Update fires and check collisions
         this.fires.forEach((fire, fireIndex) => {
             fire.flicker += 0.1;
+
+            // Handle fire growth animation
+            if (fire.isGrowing && fire.size < fire.targetSize) {
+                fire.size += fire.growthRate;
+                if (fire.size >= fire.targetSize) {
+                    fire.size = fire.targetSize;
+                    fire.isGrowing = false;
+                }
+            }
             
-            // Check water collision
+            // Check water collision with main drops
             this.waterDrops.forEach((drop, dropIndex) => {
                 const dist = Math.hypot(drop.x - fire.x, drop.y - fire.y);
                 if (dist < fire.size) {
-                    fire.life -= 10;
+                    fire.life -= 12; // Main drops are more effective
                     this.waterDrops.splice(dropIndex, 1);
+                }
+            });
+
+            // Check mist collision (less effective but still works)
+            this.mistParticles.forEach((mist, mistIndex) => {
+                const dist = Math.hypot(mist.x - fire.x, mist.y - fire.y);
+                if (dist < fire.size) {
+                    fire.life -= 3; // Mist is less effective
+                    this.mistParticles.splice(mistIndex, 1);
                 }
             });
             
@@ -695,8 +1310,8 @@ ${this.firesExtinguished === this.totalFires ?
     }
     
     draw() {
-        // Clear canvas
-        this.ctx.fillStyle = '#87CEEB';
+        // Clear canvas with more distinct sky blue
+        this.ctx.fillStyle = '#5dade2';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Draw ground
@@ -704,6 +1319,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillRect(0, this.canvas.height - 100, this.canvas.width, 100);
         
         this.drawBuildings();
+        this.drawPuddles();
         this.drawTruck();
         this.drawHydrant();
         this.drawLadder();
@@ -734,21 +1350,42 @@ ${this.firesExtinguished === this.totalFires ?
     }
     
     drawTruck() {
+        if (this.truckStyle === 'detailed') {
+            this.drawDetailedTruck();
+        } else {
+            this.drawClassicTruck();
+        }
+    }
+
+    drawClassicTruck() {
         // Main body
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
-        
+
         // Cab
         this.ctx.fillStyle = '#c0392b';
         this.ctx.fillRect(this.truck.x + 80, this.truck.y - 20, 40, 30);
-        
+
+        // Emergency lights on cab roof (smaller for classic truck)
+        const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
+                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+        if (shouldFlash) {
+            this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
+        } else {
+            this.ctx.fillStyle = '#e74c3c'; // Normal red
+        }
+        this.ctx.beginPath();
+        this.ctx.arc(this.truck.x + 90, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 110, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+
         // Wheels
         this.ctx.fillStyle = '#2c3e50';
         this.ctx.beginPath();
         this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
         this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
         this.ctx.fill();
-        
+
         // Hose coil
         if (this.gameState === 'START') {
             this.ctx.fillStyle = '#f1c40f';
@@ -756,7 +1393,91 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.arc(this.truck.hoseCoil.x, this.truck.hoseCoil.y, this.truck.hoseCoil.radius, 0, Math.PI * 2);
             this.ctx.fill();
         }
-        
+
+        // Port
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.beginPath();
+        this.ctx.arc(this.truck.port.x, this.truck.port.y, this.truck.port.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawDetailedTruck() {
+        // Main body with panels
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
+
+        // Equipment compartment panels
+        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 10, 25, 25);
+        this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 10, 25, 25);
+        this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 40, 25, 25);
+        this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 40, 25, 25);
+
+        // Cab with more detail
+        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillRect(this.truck.x + 80, this.truck.y - 20, 40, 30);
+
+        // Cab windows
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.fillRect(this.truck.x + 85, this.truck.y - 15, 30, 20);
+
+        // Horizontal ladder on top
+        const ladderY = this.truck.y - 8;
+        this.ctx.fillStyle = '#95a5a6';
+        this.ctx.fillRect(this.truck.x + 15, ladderY, 80, 6);
+
+        // Ladder rungs
+        this.ctx.fillStyle = '#7f8c8d';
+        for (let i = 0; i < 6; i++) {
+            const rungX = this.truck.x + 20 + (i * 12);
+            this.ctx.fillRect(rungX, ladderY, 2, 6);
+        }
+
+        // Ladder mounting brackets
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(this.truck.x + 12, ladderY - 2, 6, 10);
+        this.ctx.fillRect(this.truck.x + 92, ladderY - 2, 6, 10);
+
+        // Emergency lights on top (flash during truck change animation or continuously if enabled)
+        const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
+                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+        if (shouldFlash) {
+            this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
+        } else {
+            this.ctx.fillStyle = '#e74c3c'; // Normal red
+        }
+        this.ctx.beginPath();
+        this.ctx.arc(this.truck.x + 30, this.truck.y - 12, 3, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 70, this.truck.y - 12, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Wheels with more detail
+        this.ctx.fillStyle = '#2c3e50';
+        this.ctx.beginPath();
+        this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Wheel rims
+        this.ctx.fillStyle = '#95a5a6';
+        this.ctx.beginPath();
+        this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Bumper
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(this.truck.x + 75, this.truck.y + this.truck.height - 5, 50, 8);
+
+        // Hose coil
+        if (this.gameState === 'START') {
+            this.ctx.fillStyle = '#f1c40f';
+            this.ctx.beginPath();
+            this.ctx.arc(this.truck.hoseCoil.x, this.truck.hoseCoil.y, this.truck.hoseCoil.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
         // Port
         this.ctx.fillStyle = '#34495e';
         this.ctx.beginPath();
@@ -765,25 +1486,110 @@ ${this.firesExtinguished === this.totalFires ?
     }
     
     drawHydrant() {
+        if (this.hydrantStyle === 'modern') {
+            this.drawModernHydrant();
+        } else {
+            this.drawClassicHydrant();
+        }
+    }
+
+    drawClassicHydrant() {
         // Main body
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.hydrant.x, this.hydrant.y, this.hydrant.width, this.hydrant.height);
-        
+
         // Top cap
         this.ctx.fillStyle = '#c0392b';
         this.ctx.beginPath();
         this.ctx.arc(this.hydrant.x + this.hydrant.width/2, this.hydrant.y, 25, 0, Math.PI * 2);
         this.ctx.fill();
-        
+
         // Port
         this.ctx.fillStyle = '#34495e';
         this.ctx.beginPath();
         this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius, 0, Math.PI * 2);
         this.ctx.fill();
-        
+
         // Valve
         this.ctx.fillStyle = '#c0392b';
         this.ctx.fillRect(this.hydrant.valve.x, this.hydrant.valve.y, this.hydrant.valve.width, this.hydrant.valve.height);
+    }
+
+    drawModernHydrant() {
+        const centerX = this.hydrant.x + this.hydrant.width / 2;
+
+        // Base plate
+        this.ctx.fillStyle = '#7f8c8d';
+        this.ctx.fillRect(this.hydrant.x - 5, this.hydrant.y + this.hydrant.height, this.hydrant.width + 10, 8);
+
+        // Main body - tapered cylinder
+        this.ctx.fillStyle = '#f39c12'; // Yellow/gold color for modern hydrant
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.hydrant.x + 2, this.hydrant.y + this.hydrant.height);
+        this.ctx.lineTo(this.hydrant.x + 5, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 5, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 2, this.hydrant.y + this.hydrant.height);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Top section - wider
+        this.ctx.fillStyle = '#e67e22'; // Darker orange
+        this.ctx.fillRect(this.hydrant.x - 2, this.hydrant.y, this.hydrant.width + 4, 20);
+
+        // Top cap - dome shape
+        this.ctx.fillStyle = '#d35400';
+        this.ctx.beginPath();
+        this.ctx.ellipse(centerX, this.hydrant.y, this.hydrant.width/2 + 2, 8, 0, Math.PI, 0, true);
+        this.ctx.fill();
+
+        // Side ports (2 on each side)
+        this.ctx.fillStyle = '#34495e';
+
+        // Left port
+        this.ctx.beginPath();
+        this.ctx.arc(this.hydrant.x - 5, this.hydrant.y + 30, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Right port (the interactive one)
+        this.ctx.beginPath();
+        this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Port threads (detail)
+        this.ctx.strokeStyle = '#2c3e50';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            this.ctx.beginPath();
+            this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius - 2 - (i * 2), 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+
+        // Valve - pentagon nut shape on top
+        this.ctx.fillStyle = '#e67e22';
+        this.ctx.save();
+        this.ctx.translate(this.hydrant.valve.x + this.hydrant.valve.width/2, this.hydrant.valve.y + this.hydrant.valve.height/2);
+        this.ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const x = Math.cos(angle) * 12;
+            const y = Math.sin(angle) * 12;
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#d35400';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        this.ctx.restore();
+
+        // Reflective strips for visibility
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fillRect(this.hydrant.x + 8, this.hydrant.y + 25, 4, 10);
+        this.ctx.fillRect(this.hydrant.x + this.hydrant.width - 12, this.hydrant.y + 25, 4, 10);
     }
     
     drawLadder() {
@@ -860,21 +1666,98 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.restore();
         }
     }
-    
+
+    drawPuddles() {
+        this.puddles.forEach(puddle => {
+            if (puddle.size > 0) {
+                // Check if puddle is on ground or building to determine what to draw
+                const groundLevel = this.canvas.height - 100;
+                const isOnGround = puddle.y >= groundLevel;
+
+                // Find which building (if any) this puddle is on
+                const onBuilding = this.buildings.find(building => {
+                    return puddle.x >= building.x &&
+                           puddle.x <= building.x + building.width &&
+                           puddle.y >= building.y &&
+                           puddle.y <= building.y + building.height;
+                });
+
+                // Only draw if puddle is on a valid surface
+                if (!isOnGround && !onBuilding) {
+                    return;
+                }
+
+                this.ctx.save();
+
+                // Create specific clipping for this puddle
+                this.ctx.beginPath();
+                if (isOnGround) {
+                    // Clip to ground area only
+                    this.ctx.rect(0, groundLevel, this.canvas.width, 100);
+                } else if (onBuilding) {
+                    // Clip to specific building only
+                    this.ctx.rect(onBuilding.x, onBuilding.y, onBuilding.width, onBuilding.height);
+                }
+                this.ctx.clip();
+
+                // Use consistent dark color for entire puddle
+                this.ctx.fillStyle = `rgba(93, 109, 111, ${puddle.opacity})`;
+
+                // Draw main puddle circle (only portions on surfaces will show due to clipping)
+                this.ctx.beginPath();
+                this.ctx.arc(puddle.x, puddle.y, puddle.size, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Add smaller overlapping circles for organic shape - same dark color
+                if (puddle.size > 8) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(puddle.x - puddle.size * 0.3, puddle.y + puddle.size * 0.2, puddle.size * 0.6, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(puddle.x + puddle.size * 0.4, puddle.y - puddle.size * 0.1, puddle.size * 0.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+
+                this.ctx.restore();
+            }
+        });
+    }
+
     drawWater() {
+        // Draw main water stream
         this.ctx.fillStyle = '#3498db';
         this.waterDrops.forEach(drop => {
+            const size = this.doubleSpray ? (drop.size || 4) * 2 : (drop.size || 4);
             this.ctx.beginPath();
-            this.ctx.arc(drop.x, drop.y, 4, 0, Math.PI * 2);
+            this.ctx.arc(drop.x, drop.y, size, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+
+        // Draw mist particles with slight variation for heavy vs light
+        this.mistParticles.forEach(mist => {
+            const mistSize = this.doubleSpray ? mist.size * 1.5 : mist.size;
+            if (mist.type === 'heavy') {
+                // Heavy mist is slightly more opaque and blue-white
+                this.ctx.fillStyle = `rgba(52, 152, 219, ${mist.opacity * 1.1})`;
+            } else {
+                // Light mist keeps the original color
+                this.ctx.fillStyle = `rgba(52, 152, 219, ${mist.opacity})`;
+            }
+            this.ctx.beginPath();
+            this.ctx.arc(mist.x, mist.y, mistSize, 0, Math.PI * 2);
             this.ctx.fill();
         });
     }
     
     drawFires() {
         this.fires.forEach(fire => {
+            // Skip rendering fires that are too small to see
+            if (fire.size < 1) return;
+
             this.ctx.save();
             this.ctx.translate(fire.x, fire.y);
-            
+
             const opacity = fire.life / 100;
             const flicker = Math.sin(fire.flicker) * 5;
             

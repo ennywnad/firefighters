@@ -49,9 +49,20 @@ function startFireRescueGame() {
 
     // Set up debug sync callback
     currentFireGame.onDebugModeChange = updateDebugButtonFromGame;
+    currentFireGame.onTruckStyleChange = updateTruckStyleRadiosFromGame;
 
-    // Initialize debug button state
+    // Set up truck style radio buttons
+    setupTruckStyleRadios();
+
+    // Set up fun option checkboxes
+    setupFunOptions();
+
+    // Set up hydrant style dropdown
+    setupHydrantStyleSelect();
+
+    // Initialize button states
     updateDebugButtonFromGame();
+    updateTruckStyleRadiosFromGame();
 
     toggleBackgroundMusic(true);
 }
@@ -85,6 +96,49 @@ function updateDebugButtonFromGame() {
     localStorage.setItem('firefighterDebugMode', isDebugOn.toString());
 }
 
+// Truck style radio button functionality
+function setupTruckStyleRadios() {
+    const classicRadio = document.getElementById('truck-classic-radio');
+    const detailedRadio = document.getElementById('truck-detailed-radio');
+
+    if (classicRadio) {
+        classicRadio.addEventListener('change', () => {
+            if (classicRadio.checked && currentFireGame) {
+                currentFireGame.setTruckStyle('classic');
+            }
+        });
+    }
+
+    if (detailedRadio) {
+        detailedRadio.addEventListener('change', () => {
+            if (detailedRadio.checked && currentFireGame) {
+                currentFireGame.setTruckStyle('detailed');
+            }
+        });
+    }
+}
+
+function updateTruckStyleRadiosFromGame() {
+    const classicRadio = document.getElementById('truck-classic-radio');
+    const detailedRadio = document.getElementById('truck-detailed-radio');
+
+    if (!currentFireGame) return;
+
+    // Update radio button selection based on current or pending style
+    let targetStyle = currentFireGame.truckStyle;
+    if (currentFireGame.pendingTruckStyleChange) {
+        targetStyle = currentFireGame.truckStyle === 'classic' ? 'detailed' : 'classic';
+    }
+
+    if (classicRadio && detailedRadio) {
+        classicRadio.checked = (targetStyle === 'classic');
+        detailedRadio.checked = (targetStyle === 'detailed');
+    }
+
+    // Save to localStorage for persistence
+    localStorage.setItem('firefighterTruckStyle', currentFireGame.truckStyle);
+}
+
 function showHeroReport(message) {
     heroReportMessage.textContent = message;
     const fireGameScreen = document.getElementById('fire-game-screen');
@@ -102,6 +156,11 @@ function showOptionsOverlay() {
 function hideOptionsOverlay() {
     // Hide options screen to return to game
     optionsScreen.classList.add('hidden');
+
+    // Check if there's a pending truck style change and trigger animation
+    if (currentFireGame && currentFireGame.pendingTruckStyleChange) {
+        currentFireGame.startTruckChangeAnimation();
+    }
 }
 
 function goToMenu() {
@@ -294,23 +353,90 @@ function restartFireRescue() {
 }
 
 // Fire truck click handler
+function setupHydrantStyleSelect() {
+    const hydrantSelect = document.getElementById('hydrant-style-select');
+
+    if (hydrantSelect) {
+        // Set initial value from localStorage
+        const savedStyle = localStorage.getItem('firefighterHydrantStyle') || 'classic';
+        hydrantSelect.value = savedStyle;
+
+        // Handle hydrant style changes
+        hydrantSelect.addEventListener('change', () => {
+            if (currentFireGame) {
+                currentFireGame.hydrantStyle = hydrantSelect.value;
+                localStorage.setItem('firefighterHydrantStyle', hydrantSelect.value);
+            }
+        });
+    }
+}
+
+function setupFunOptions() {
+    const doubleSprayCheckbox = document.getElementById('double-spray-checkbox');
+    const slowLightsCheckbox = document.getElementById('slow-lights-checkbox');
+    const fireSpreadCheckbox = document.getElementById('fire-spread-checkbox');
+    const emergencyLightsCheckbox = document.getElementById('emergency-lights-checkbox');
+
+    // Set initial states from localStorage
+    if (doubleSprayCheckbox) {
+        doubleSprayCheckbox.checked = localStorage.getItem('firefighterDoubleSpray') === 'true';
+        doubleSprayCheckbox.addEventListener('change', () => {
+            if (currentFireGame) {
+                currentFireGame.doubleSpray = doubleSprayCheckbox.checked;
+                localStorage.setItem('firefighterDoubleSpray', doubleSprayCheckbox.checked.toString());
+            }
+        });
+    }
+
+    if (slowLightsCheckbox) {
+        slowLightsCheckbox.checked = localStorage.getItem('firefighterSlowLights') === 'true';
+        slowLightsCheckbox.addEventListener('change', () => {
+            if (currentFireGame) {
+                currentFireGame.slowLights = slowLightsCheckbox.checked;
+                localStorage.setItem('firefighterSlowLights', slowLightsCheckbox.checked.toString());
+            }
+        });
+    }
+
+    if (fireSpreadCheckbox) {
+        fireSpreadCheckbox.checked = localStorage.getItem('firefighterFireSpread') === 'true';
+        fireSpreadCheckbox.addEventListener('change', () => {
+            if (currentFireGame) {
+                currentFireGame.fireSpread = fireSpreadCheckbox.checked;
+                localStorage.setItem('firefighterFireSpread', fireSpreadCheckbox.checked.toString());
+            }
+        });
+    }
+
+    if (emergencyLightsCheckbox) {
+        emergencyLightsCheckbox.checked = localStorage.getItem('firefighterEmergencyLights') === 'true';
+        emergencyLightsCheckbox.addEventListener('change', () => {
+            if (currentFireGame) {
+                currentFireGame.emergencyLights = emergencyLightsCheckbox.checked;
+                localStorage.setItem('firefighterEmergencyLights', emergencyLightsCheckbox.checked.toString());
+            }
+        });
+    }
+}
+
 function setupFireTruckClick() {
     const fireTruckIcon = document.getElementById('fire-truck-icon');
-    let hasRolledOff = false;
+    let canClick = false;
 
     if (fireTruckIcon) {
         // Wait for the initial animation to complete before enabling clicks
         setTimeout(() => {
+            canClick = true;
             fireTruckIcon.addEventListener('click', () => {
-                if (!hasRolledOff) {
-                    hasRolledOff = true;
-                    fireTruckIcon.classList.add('rolling-off');
+                if (canClick && currentFireGame) {
+                    // Just trigger the drive-off and return animation without changing truck style
+                    currentFireGame.startTruckDriveAnimation();
 
-                    // After the roll-off animation completes, reset for next time
+                    // Briefly disable clicking to prevent rapid toggling
+                    canClick = false;
                     setTimeout(() => {
-                        fireTruckIcon.classList.remove('rolling-off');
-                        hasRolledOff = false;
-                    }, 3000); // Match the truckRollOff animation duration
+                        canClick = true;
+                    }, 500);
                 }
             });
         }, 4000); // Wait for truckCrashIn animation to complete
