@@ -8,6 +8,10 @@
 
 ## 🎮 Play Now
 
+### 🌐 Play Online
+**[Play Live on GitHub Pages →](https://ennywnad.github.io/firefighters/)**
+
+### 💻 Play Locally
 Simply open `index.html` in your browser to start playing! No installation required.
 
 **Note:** An internet connection is required for external dependencies (Tailwind CSS, Google Fonts, Tone.js).
