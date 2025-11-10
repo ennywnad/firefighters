@@ -3,7 +3,7 @@
 **An interactive, educational browser game for toddlers featuring firefighting heroes!**
 
 [![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-green.svg)]()
+[![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Age](https://img.shields.io/badge/age-2--5%20years-orange.svg)]()
 
 ## 🎮 Play Now
@@ -12,45 +12,39 @@ Simply open `index.html` in your browser to start playing! No installation requi
 
 ## 🌟 Features
 
-### Complete Game Experience - 5 Levels!
+### 🔥 Fire Rescue Level
 
-#### 🔥 **Level 1: Fire Rescue**
-- Connect hoses step-by-step
-- Spray water to save buildings
-- Learn cause and effect through interactive gameplay
+Experience realistic firefighting action:
+- **Truck Entrance Animation** - Watch the fire truck drive onto the scene with flashing emergency lights
+- **Step-by-Step Hose Connection** - Attach the nozzle to the truck and connect to the hydrant
+- **Interactive Water Spray** - Aim and spray water to extinguish fires
+- **Dynamic Fire Behavior** - Fires grow and spread (optional) for added challenge
+- **Realistic Water Effects** - Mist particles, puddles that accumulate and evaporate
+- **Timer Modes** - 1-minute or 5-minute challenges, or play at your own pace
+- **Detailed Scoreboard** - Track fires extinguished, water used, accuracy, and achievements
 
-#### 🐱 **Level 2: Animal Rescue**  
-- Deploy safety equipment
-- Drop cones, Extend ladders 
-- Save adorable animals from trees
+### Customization Options
 
-#### 🔧 **Level 3: Truck Building**
-- Interactive truck preparation with animated tools
-- Build truck in block modules to make the fire truck you want.
-- Open toolbox and select the right tools
-- Tighten bolts, install equipment
-- Experience satisfying tool animations
+Personalize your firefighting experience:
+- 🚒 **Truck Styles** - Choose between Classic or Detailed fire truck designs
+- 💧 **Hydrant Styles** - Classic or Modern fire hydrant appearance
+- 🔊 **Water Sound Options** - Default, Deeper, Rumbly, or Off
+- 🎤 **Voice Guide** - Optional voice instructions for younger players
 
-#### 🏢 **Level 4: Station Morning**
-- Start your day at the fire station
-- Slide down the fire pole
-- Get dressed in firefighter gear
-- Complete morning station routine
+### Fun Gameplay Modifiers
 
-#### 🚨 **Level 5: Emergency Response**
-- Answer emergency calls
-- Multi-stage rescue missions
-- Complete fire and animal rescue operations
-- Experience the full firefighter workflow
+Add extra challenge and variety:
+- 💧 **Double-Sized Water Spray** - Bigger splash for easier firefighting
+- 🏢 **Slower Office Lights** - More realistic building lighting behavior
+- 🔥 **Fires Spawn More Fires** - Dynamic fire spreading for advanced players
+- 🚨 **Continuous Emergency Lights** - Keep those lights flashing throughout gameplay
 
-### Game Features
-- 🎵 **Background Music** - Cheerful, non-repetitive melodies
-- 🔊 **Enhanced Audio** - Comprehensive sound effects with Tone.js
-- 🌈 **Scene Variations** - Day, Night, Autumn, and Winter themes
-- 🏆 **Hero's Report** - Positive reinforcement after each level
-- 👆 **Touch Support** - Works on tablets and phones
-- 🎨 **Particle Effects** - Beautiful animations and visual feedback
+### Additional Features
+- 🎵 **Dynamic Audio** - Interactive sound effects with Tone.js
+- 👆 **Touch Support** - Works perfectly on tablets and phones
+- 🎨 **Particle Effects** - Beautiful water spray, mist, and puddle animations
 - 🎮 **Modern Architecture** - Built with ES6 classes for smooth gameplay
+- 🔧 **Developer Mode** - Debug tools with coordinate display and measurements
 
 ## 🎯 Educational Value
 
@@ -75,13 +69,21 @@ This game helps toddlers develop:
 - ✅ Safari
 - ✅ Mobile browsers (iOS/Android)
 
-## 🚀 What's Next
+## 🚀 Future Development
 
-The core game is complete with all 5 levels! Future development will focus on:
+This game is actively being developed! Planned features include:
 
-### Enhancements in Progress
-- 🎨 **Enhanced Animations** - Smoother interactions and effects
-- 📱 **Mobile Optimization** - Better touch controls and responsive design  
+### Additional Levels (Concepts Preserved)
+- 🐱 **Animal Rescue** - Save animals with ladders and safety equipment
+- 🔧 **Truck Building** - Assemble and maintain the fire truck
+- 🏢 **Station Morning** - Start your day at the fire station
+- 🚨 **Emergency Response** - Multi-stage rescue missions
+
+See [FUTURE_LEVELS.md](FUTURE_LEVELS.md) for preserved level concepts.
+
+### Ongoing Enhancements
+- 🎨 **Enhanced Animations** - Continuous improvement of visual effects
+- 📱 **Mobile Optimization** - Better touch controls and responsive design
 - 🎵 **Expanded Audio** - More sound effects and dynamic music
 - ♿ **Accessibility** - Screen reader support and keyboard navigation
 
@@ -102,29 +104,32 @@ No build process required - it's that simple!
 
 ## 📝 Version History
 
-- **v1.3.0** - 🎨 **UI/UX IMPROVEMENTS & INTERACTIVE FEATURES**
-  - Fire Rescue: Streamlined interface with auto-start and simplified timer controls
-  - Enhanced fire truck animation: Now drives in from right and crashes through title text
-  - Interactive fire truck: Click to watch it roll off screen after loading
-  - Improved options menu: Cleaner layout with better visual hierarchy
-  - Timer simplification: Removed popup, added convenient top-bar timer buttons
-- **v1.2.0** - 🎮 **LEVEL ENHANCEMENTS**
-  - Animal Rescue: Implemented drag-and-drop truck positioning and added more interactive steps.
-  - Truck Building: Enlarged module UI and added particle effects for better feedback.
-- **v1.1.0** - 🔧 **WORKFLOW IMPROVEMENTS & POLISH**
+- **v1.3.0** (Current) - 🎨 **CUSTOMIZATION & ADVANCED GAMEPLAY**
+  - Added truck and hydrant style customization (Classic/Detailed, Classic/Modern)
+  - Implemented fun gameplay modifiers (double spray, fire spreading, emergency lights)
+  - Enhanced visual effects with mist particles and realistic puddle system
+  - Added truck entrance/exit animations with flashing emergency lights
+  - Introduced 10-second grace period for better gameplay pacing
+  - Improved options menu with radio buttons and organized sections
+  - Enhanced audio options (multiple water sound types, voice guide toggle)
+  - Streamlined UI with auto-start and simplified timer controls
+  - Added developer mode with coordinate display and measurement tools
+- **v1.2.0** - 🎮 **UI/UX IMPROVEMENTS**
+  - Enhanced fire truck animation driving in from off-screen
+  - Improved options menu layout with better visual hierarchy
+  - Added convenient top-bar timer buttons (1-min, 5-min)
+  - Streamlined interface design
+- **v1.1.0** - 🔧 **WORKFLOW IMPROVEMENTS**
   - Enhanced development workflow with CI/CD pipelines
   - Automated code validation and quality checks
-  - Comprehensive development documentation
   - Git hooks for local validation
-  - Repository setup scripts for contributors
-- **v1.0.0** - 🎉 **COMPLETE GAME RELEASE!** 
-  - All 5 levels implemented with ES6 classes
-  - Level progression system with unlock mechanics
-  - Enhanced animations and particle effects
-  - Comprehensive audio system across all levels
-  - Truck Building, Station Morning, and Emergency Response levels added
-- **v0.2.0** - Added Animal Rescue level, scene variations, Hero's Report
-- **v0.1.0** - Initial release with Fire Rescue level
+  - Comprehensive development documentation
+- **v1.0.0** - 🎉 **INITIAL RELEASE**
+  - Fire Rescue level with complete gameplay loop
+  - Interactive hose connection and water spray mechanics
+  - Detailed scoreboard with achievements
+  - Tone.js audio integration
+  - ES6 class-based architecture
 
 ## 👨‍👩‍👧‍👦 For Parents
 
@@ -137,7 +142,19 @@ This game is designed with toddlers in mind:
 
 ## 📄 License
 
-MIT License - feel free to use this for educational purposes!
+This work is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+
+You are free to:
+- ✅ **Share** - Copy and redistribute the material
+- ✅ **Adapt** - Remix, transform, and build upon the material
+
+Under these terms:
+- 📝 **Attribution** - Give appropriate credit
+- 🚫 **NonCommercial** - Not for commercial use
+- 🔄 **ShareAlike** - Distribute derivatives under the same license
+
+See the [LICENSE](LICENSE) file for full details or visit:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 ## 🙏 Credits
 
