@@ -7,16 +7,24 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 
 ## 🎮 Game Levels Overview
 
-### ✅ WIP Levels
-1. **Fire Rescue** - Connect hoses and spray water to put out fires
+### ✅ Current Levels
+1. **Fire Rescue** (v1.3.0) - Connect hoses and spray water to put out fires
+   - Fully implemented with customization options
+   - Truck and hydrant style variations
+   - Dynamic fire spreading mechanics
+   - Realistic water effects with puddles and mist
+   - Comprehensive scoreboard and achievements
+
+### 📋 Planned Levels (See FUTURE_LEVELS.md)
 2. **Animal Rescue** - Use ladder to rescue animals from trees
-   1. [x] Animal selection is now random. Implemented drag-and-drop truck positioning, cone placement, and ladder raising as distinct steps. 
-3. **Truck Building** - Interactive truck preparation with animated tools
-   1. [x] Implemented a drag-and-drop modular system. Enlarged module UI, text, and icons for better presentation. Added particle effects for feedback.  
-4. **Station Morning** - Start the day at the fire station
-   1. the presentation is terrible. the art, the mechanic of the pole slide. I like station morning if it was more like my sons morning getting up, dressed, breakfast and out to the fire station.  At a fire station.
-5. **Emergency Response** - Complete multi-stage rescue missions
-   1. this needs more steps or a rethink.  An ambulance to the scene level. Calling 911 and sharing where you are.  like your home address.  This could be a lesson for helping my son understand what to do in an emergency.
+3. **Truck Building** - Interactive truck preparation and assembly
+4. **Station Morning** - Morning routine at the fire station
+5. **Emergency Response** - Multi-stage rescue missions
+
+**Development Notes:**
+- Focus on educational value for toddlers
+- Morning routine could teach getting ready for the day
+- Emergency response could teach 911 and home address awareness
 
 
 ---
@@ -112,20 +120,25 @@ An interactive browser game for toddlers featuring firefighting adventures with 
 
 ---
 
-## ✅ Completed
+## ✅ Completed (v1.3.0)
 * [x] Initial project setup with file separation
-* [x] Development workflow documentation
-* [x] Background music system
-* [x] Hero's Report feature
-* [x] **Five complete playable levels:**
-  - [x] Fire Rescue (Enhanced version with improved mechanics)
-  - [x] Animal Rescue (Original plus enhancements)
-  - [x] Truck Building (Full interactive tool system)
-  - [x] Station Morning (Complete morning routine)
-  - [x] Emergency Response (Multi-stage mission system)
-* [x] Scene variations (day/night/autumn/winter)
-* [x] **ES6 Class Architecture:** All levels converted to modern class structure
-* [x] **Level Progression System:** Sequential unlocking with progress tracking
-* [x] **Animation Engine:** Particle systems and animated values
-* [x] **Enhanced Audio:** Comprehensive Tone.js integration across all levels
-* [x] Basic sound effects with Tone.js
+* [x] Development workflow documentation and CI/CD
+* [x] Git hooks and automated validation
+* [x] **Fire Rescue Level (Complete):**
+  - [x] Truck entrance/exit animations with emergency lights
+  - [x] Step-by-step hose connection mechanics
+  - [x] Interactive water spray with realistic physics
+  - [x] Dynamic fire behavior with optional spreading
+  - [x] Puddle system with surface detection
+  - [x] Mist particle effects
+  - [x] Comprehensive scoreboard with achievements
+  - [x] Timer modes (1-min, 5-min, manual)
+* [x] **Customization System:**
+  - [x] Truck style options (Classic/Detailed)
+  - [x] Hydrant style options (Classic/Modern)
+  - [x] Fun gameplay modifiers (double spray, fire spread, etc.)
+  - [x] Audio options (water sounds, voice guide)
+* [x] **ES6 Class Architecture:** Modern class-based structure
+* [x] **Enhanced Audio:** Tone.js integration with multiple sound types
+* [x] **Developer Mode:** Debug tools and measurements
+* [x] **Documentation:** Comprehensive guides and workflow docs

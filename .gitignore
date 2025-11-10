@@ -15,6 +15,7 @@ Thumbs.db
 *~
 .sublime-project
 .sublime-workspace
+.claude/
 
 # Node.js (if adding build tools later)
 node_modules/

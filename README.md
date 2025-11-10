@@ -10,6 +10,8 @@
 
 Simply open `index.html` in your browser to start playing! No installation required.
 
+**Note:** An internet connection is required for external dependencies (Tailwind CSS, Google Fonts, Tone.js).
+
 ## 🌟 Features
 
 ### 🔥 Fire Rescue Level

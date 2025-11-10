@@ -25,7 +25,7 @@ This document outlines the development workflow and best practices for the Firef
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/firefighters.git
+   git clone https://github.com/ennywnad/firefighters.git
    cd firefighters
    ```
 
