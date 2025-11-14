@@ -1622,9 +1622,9 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
 
-        // Cab (moved to front)
+        // Cab (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 100, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
 
         // Emergency lights on cab roof (smaller for classic truck)
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
@@ -1635,8 +1635,8 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 110, this.truck.y - 25, 2, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 130, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 115, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 135, this.truck.y - 25, 2, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Wheels
@@ -1674,13 +1674,13 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 40, 25, 25);
         this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 40, 25, 25);
 
-        // Cab with more detail (moved to front)
+        // Cab with more detail (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 100, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
 
         // Cab windows
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 15, 30, 20);
+        this.ctx.fillRect(this.truck.x + 110, this.truck.y - 15, 30, 20);
 
         // Horizontal ladder on top
         const ladderY = this.truck.y - 8;
@@ -1726,9 +1726,9 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Bumper (moved to front)
+        // Bumper (at right edge)
         this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(this.truck.x + 95, this.truck.y + this.truck.height - 5, 50, 8);
+        this.ctx.fillRect(this.truck.x + 100, this.truck.y + this.truck.height - 5, 45, 8);
 
         // Hose coil
         if (this.gameState === 'START') {
@@ -1764,13 +1764,13 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(truck.x + 10, truck.y + 43, 28, 28);
         this.ctx.strokeRect(truck.x + 43, truck.y + 43, 28, 28);
 
-        // Cab with more detail (moved to front)
+        // Cab with more detail (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(truck.x + 110, truck.y - 22, 45, 32);
+        this.ctx.fillRect(truck.x + 115, truck.y - 22, 45, 32);
 
         // Cab windows
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(truck.x + 115, truck.y - 17, 35, 22);
+        this.ctx.fillRect(truck.x + 120, truck.y - 17, 35, 22);
 
         // Emergency lights on top (flash during arrival or when ladder is active)
         const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
@@ -1781,16 +1781,16 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(truck.x + 125, truck.y - 25, 3, 0, Math.PI * 2);
-        this.ctx.arc(truck.x + 140, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 130, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 145, truck.y - 25, 3, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Wheels with rotation animation
         this.drawTruck2Wheels(truck);
 
-        // Bumper (moved to front)
+        // Bumper (at right edge)
         this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(truck.x + 105, truck.y + truck.height - 5, 55, 8);
+        this.ctx.fillRect(truck.x + 110, truck.y + truck.height - 5, 50, 8);
 
         // Draw the extending ladder
         this.drawTruck2Ladder(truck);
@@ -1841,8 +1841,8 @@ ${this.firesExtinguished === this.totalFires ?
     drawTruck2Ladder(truck) {
         const ladder = truck.ladder;
 
-        // Ladder anchored to front of truck (to face truck1 on the left)
-        const anchorX = truck.x + 40;
+        // Ladder anchored to left side of truck (raises on the left)
+        const anchorX = truck.x + 20;
         const anchorY = truck.y - 5;
 
         // Calculate current total length
