@@ -86,7 +86,46 @@ class FireRescueLevel {
             hoseCoil: { x: this.truckStartX + 65, y: 430, radius: 20 },
             port: { x: this.truckStartX + 115, y: 440, radius: 12 }
         };
-        
+
+        // Second truck with extending ladder
+        this.truck2 = {
+            x: 0, // Will be set based on canvas width
+            y: 400,
+            targetX: 0, // Will be set to middle of canvas
+            width: 160,
+            height: 90,
+            isActive: false,
+            isRollingIn: false,
+            hasArrived: false,
+            wheelRotation: 0,
+            lightFlash: false,
+
+            ladder: {
+                baseX: 0,
+                baseY: -45,
+                angle: 0, // 0° = horizontal
+                targetAngle: 45,
+                isExtending: false,
+                isRetracting: false,
+
+                baseLength: 80,
+                extensionLength: 0,
+                maxExtension: 60,
+
+                rotationComplete: false,
+                extensionComplete: false
+            }
+        };
+
+        // Radio button for calling truck2
+        this.radioButton = {
+            x: 0, // Will be set based on canvas width
+            y: 0, // Will be set based on canvas height
+            width: 60,
+            height: 60,
+            isHovered: false
+        };
+
         this.hydrant = {
             x: 350, y: 420, width: 40, height: 60,
             port: { x: 350, y: 450, radius: 12 },
@@ -427,6 +466,158 @@ class FireRescueLevel {
         this.setupTruckEquipment();
     }
 
+    // ====== TRUCK 2 FUNCTIONS ======
+
+    callTruck2() {
+        if (this.truck2.isActive || this.truck2.isRollingIn) {
+            // Truck already active or arriving
+            return;
+        }
+
+        this.truck2.isActive = true;
+        this.truck2.isRollingIn = true;
+        this.truck2.hasArrived = false;
+        this.truck2.x = this.canvas.width + 200; // Start off-screen right
+        this.truck2.wheelRotation = 0;
+        this.truck2.lightFlash = false;
+
+        // Play horn sound
+        setTimeout(() => {
+            this.hornSynth.triggerAttackRelease('C4', '4n');
+        }, 100);
+    }
+
+    animateTruck2() {
+        if (!this.truck2.isRollingIn) return;
+
+        // Roll from right to middle
+        const speed = -4; // Negative = moving left, 4px per frame
+        this.truck2.x += speed;
+
+        // Animate wheel rotation
+        this.truck2.wheelRotation += 0.2;
+
+        // Flash emergency lights
+        this.truck2.lightFlash = !this.truck2.lightFlash;
+
+        // Check if reached target
+        if (this.truck2.x <= this.truck2.targetX) {
+            this.truck2.x = this.truck2.targetX;
+            this.truck2.isRollingIn = false;
+            this.truck2.hasArrived = true;
+
+            // Play arrival sound
+            this.actionSynth.triggerAttackRelease('G3', '4n');
+        }
+    }
+
+    toggleLadder() {
+        if (!this.truck2.hasArrived) {
+            return; // Truck must arrive first
+        }
+
+        const ladder = this.truck2.ladder;
+
+        if (ladder.isExtending || ladder.isRetracting) {
+            return; // Already animating
+        }
+
+        if (ladder.extensionComplete) {
+            // Retract ladder
+            this.startLadderRetraction();
+        } else {
+            // Extend ladder
+            this.startLadderExtension();
+        }
+    }
+
+    startLadderExtension() {
+        const ladder = this.truck2.ladder;
+
+        // Reset ladder state
+        ladder.angle = 0;
+        ladder.extensionLength = 0;
+        ladder.isExtending = true;
+        ladder.isRetracting = false;
+        ladder.rotationComplete = false;
+        ladder.extensionComplete = false;
+
+        // Play sound
+        this.actionSynth.triggerAttackRelease('A4', '8n');
+    }
+
+    startLadderRetraction() {
+        const ladder = this.truck2.ladder;
+
+        ladder.isExtending = false;
+        ladder.isRetracting = true;
+        ladder.rotationComplete = false;
+        ladder.extensionComplete = false;
+
+        // Play sound
+        this.actionSynth.triggerAttackRelease('F4', '8n');
+    }
+
+    animateLadder() {
+        const ladder = this.truck2.ladder;
+
+        if (ladder.isExtending) {
+            // PHASE 1: Rotation (0° to 45°)
+            if (!ladder.rotationComplete) {
+                const rotationSpeed = 1.5; // degrees per frame
+                ladder.angle = Math.min(ladder.angle + rotationSpeed, ladder.targetAngle);
+
+                if (ladder.angle >= ladder.targetAngle) {
+                    ladder.rotationComplete = true;
+                    // Play lock sound
+                    this.actionSynth.triggerAttackRelease('C5', '16n');
+                }
+                return;
+            }
+
+            // PHASE 2: Extension (telescoping)
+            if (!ladder.extensionComplete) {
+                const extensionSpeed = 2; // pixels per frame
+                ladder.extensionLength = Math.min(
+                    ladder.extensionLength + extensionSpeed,
+                    ladder.maxExtension
+                );
+
+                if (ladder.extensionLength >= ladder.maxExtension) {
+                    ladder.extensionComplete = true;
+                    ladder.isExtending = false;
+                    // Play final lock sound
+                    this.actionSynth.triggerAttackRelease('E5', '16n');
+                }
+            }
+        } else if (ladder.isRetracting) {
+            // PHASE 1: Retract extension first
+            if (ladder.extensionLength > 0) {
+                const retractionSpeed = 2; // pixels per frame
+                ladder.extensionLength = Math.max(
+                    ladder.extensionLength - retractionSpeed,
+                    0
+                );
+                return;
+            }
+
+            // PHASE 2: Rotate back down to 0°
+            if (ladder.angle > 0) {
+                const rotationSpeed = 1.5; // degrees per frame
+                ladder.angle = Math.max(ladder.angle - rotationSpeed, 0);
+
+                if (ladder.angle <= 0) {
+                    ladder.angle = 0;
+                    ladder.isRetracting = false;
+                    ladder.extensionComplete = false;
+                    ladder.rotationComplete = false;
+                    // Play final sound
+                    this.actionSynth.triggerAttackRelease('C4', '16n');
+                }
+            }
+        }
+    }
+
     spreadFires() {
         if (this.fires.length === 0 || this.fires.length >= 20) return; // Allow more fires (was 12)
 
@@ -683,38 +874,49 @@ class FireRescueLevel {
     
     resizeCanvas() {
         if (this.gameScreen.classList.contains('hidden')) return;
-        
+
         const width = this.gameScreen.clientWidth || 800;
         const height = this.gameScreen.clientHeight || 600;
-        
+
         this.canvas.width = width;
         this.canvas.height = height;
-        
+
         // Update positions based on canvas size
         this.truck.y = height - 180;
         this.truck.hoseCoil.y = this.truck.y + 30;
         this.truck.port.y = this.truck.y + 40;
-        
+
+        // Update truck2 positions
+        this.truck2.y = height - 190; // Slightly lower to account for larger size
+        this.truck2.targetX = width / 2; // Middle of canvas
+        if (!this.truck2.isActive) {
+            this.truck2.x = width + 200; // Start off-screen right
+        }
+
+        // Update radio button position (bottom-right corner)
+        this.radioButton.x = width - 80;
+        this.radioButton.y = height - 80;
+
         this.hydrant.y = height - 160;
         this.hydrant.port.y = this.hydrant.y + 30;
         this.hydrant.valve.y = this.hydrant.y - 20;
-        
+
         this.nozzle.y = height - 300;
-        
+
         // Always update ladder and nozzle positions (they're always visible now)
         this.setupTruckEquipment();
-        
+
         // Update building heights based on new canvas size
         this.buildings.forEach((building, index) => {
             const config = [
-                { height: 280 }, { height: 200 }, { height: 350 }, 
+                { height: 280 }, { height: 200 }, { height: 350 },
                 { height: 250 }, { height: 180 }, { height: 320 }, { height: 220 }
             ][index];
             if (config) {
                 building.y = height - config.height - 100;
             }
         });
-        
+
         // Reinitialize windows after building positions change
         if (this.windows) {
             this.initializeWindows();
@@ -888,11 +1090,39 @@ class FireRescueLevel {
     }
 
     handleClick(e) {
+        const pos = this.getMousePos(e);
+
+        // Check radio button click (always available)
+        const rb = this.radioButton;
+        const rbCenterX = rb.x + rb.width / 2;
+        const rbCenterY = rb.y + rb.height / 2;
+        const distToRadio = Math.hypot(pos.x - rbCenterX, pos.y - rbCenterY);
+        if (distToRadio <= 25) {
+            if (!this.truck2.hasArrived) {
+                this.callTruck2();
+            } else {
+                this.toggleLadder();
+            }
+            return;
+        }
+
+        // Check truck2 click (toggle ladder)
+        if (this.truck2.hasArrived) {
+            const truck2Rect = {
+                x: this.truck2.x,
+                y: this.truck2.y,
+                width: this.truck2.width,
+                height: this.truck2.height
+            };
+            if (this.isInRect(pos, truck2Rect)) {
+                this.toggleLadder();
+                return;
+            }
+        }
+
         // Don't allow clicks until truck entrance is complete or during truck changing
         if (!this.truckEntranceComplete || this.truckChanging) return;
 
-        const pos = this.getMousePos(e);
-        
         switch (this.gameState) {
             case 'START':
                 if (this.isInCircle(pos, this.truck.hoseCoil)) {
@@ -901,7 +1131,7 @@ class FireRescueLevel {
                     this.actionSynth.triggerAttackRelease('C4', '8n');
                 }
                 break;
-                
+
             case 'HOSE_UNCOILED':
                 if (this.isInCircle(pos, this.truck.port)) {
                     this.gameState = 'TRUCK_CONNECTED';
@@ -909,7 +1139,7 @@ class FireRescueLevel {
                     this.actionSynth.triggerAttackRelease('E4', '8n');
                 }
                 break;
-                
+
             case 'TRUCK_CONNECTED':
                 if (this.isInCircle(pos, this.hydrant.port)) {
                     this.gameState = 'HYDRANT_CONNECTED';
@@ -917,7 +1147,7 @@ class FireRescueLevel {
                     this.actionSynth.triggerAttackRelease('G4', '8n');
                 }
                 break;
-                
+
             case 'HYDRANT_CONNECTED':
                 if (this.isInRect(pos, this.hydrant.valve)) {
                     this.gameState = 'READY_TO_SPRAY';
@@ -934,6 +1164,14 @@ class FireRescueLevel {
         if (this.truckChanging) return;
 
         this.mouse = this.getMousePos(e);
+
+        // Check if hovering over radio button
+        const rb = this.radioButton;
+        const rbCenterX = rb.x + rb.width / 2;
+        const rbCenterY = rb.y + rb.height / 2;
+        const distToRadio = Math.hypot(this.mouse.x - rbCenterX, this.mouse.y - rbCenterY);
+        this.radioButton.isHovered = distToRadio <= 25;
+
         if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
             this.updateNozzleAngle();
         }
@@ -1094,6 +1332,12 @@ class FireRescueLevel {
         // Update emergency lights flashing
         if (this.emergencyLightsFlashing) {
             this.lightFlashTimer++;
+        }
+
+        // Update truck2 animations
+        if (this.truck2.isActive) {
+            this.animateTruck2();
+            this.animateLadder();
         }
 
         // Check if grace period has ended and spawn initial fires
@@ -1321,6 +1565,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.drawBuildings();
         this.drawPuddles();
         this.drawTruck();
+        this.drawTruck2(); // Draw second truck
         this.drawHydrant();
         this.drawLadder();
         this.drawHose();
@@ -1328,7 +1573,8 @@ ${this.firesExtinguished === this.totalFires ?
         this.drawWater();
         this.drawFires();
         this.drawHighlights();
-        
+        this.drawRadioButton(); // Draw radio button
+
         // Draw developer measurements if enabled
         if (this.developerMode) {
             this.drawDeveloperOverlays();
@@ -1484,7 +1730,256 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.arc(this.truck.port.x, this.truck.port.y, this.truck.port.radius, 0, Math.PI * 2);
         this.ctx.fill();
     }
-    
+
+    // ====== TRUCK 2 DRAWING FUNCTIONS ======
+
+    drawTruck2() {
+        if (!this.truck2.isActive) return;
+
+        const truck = this.truck2;
+
+        // Main body with panels (based on detailed truck)
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
+
+        // Equipment compartment panels
+        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(truck.x + 10, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + 43, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + 10, truck.y + 43, 28, 28);
+        this.ctx.strokeRect(truck.x + 43, truck.y + 43, 28, 28);
+
+        // Cab with more detail
+        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillRect(truck.x + 85, truck.y - 22, 45, 32);
+
+        // Cab windows
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.fillRect(truck.x + 90, truck.y - 17, 35, 22);
+
+        // Emergency lights on top (flash during arrival or when ladder is active)
+        const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
+                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+        if (shouldFlash) {
+            this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
+        } else {
+            this.ctx.fillStyle = '#e74c3c'; // Normal red
+        }
+        this.ctx.beginPath();
+        this.ctx.arc(truck.x + 100, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 115, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Wheels with rotation animation
+        this.drawTruck2Wheels(truck);
+
+        // Bumper
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(truck.x + 80, truck.y + truck.height - 5, 55, 8);
+
+        // Draw the extending ladder
+        this.drawTruck2Ladder(truck);
+    }
+
+    drawTruck2Wheels(truck) {
+        const wheelRadius = 18;
+        const wheelPositions = [
+            truck.x + 30,   // Front wheel
+            truck.x + 110   // Rear wheel
+        ];
+
+        wheelPositions.forEach(wheelX => {
+            // Outer tire
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.beginPath();
+            this.ctx.arc(wheelX, truck.y + truck.height + wheelRadius, wheelRadius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Rim (rotates during movement)
+            if (truck.isRollingIn) {
+                this.ctx.save();
+                this.ctx.translate(wheelX, truck.y + truck.height + wheelRadius);
+                this.ctx.rotate(truck.wheelRotation || 0);
+
+                // Spokes
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    this.ctx.strokeStyle = '#95a5a6';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+            } else {
+                // Static rim when not moving
+                this.ctx.fillStyle = '#95a5a6';
+                this.ctx.beginPath();
+                this.ctx.arc(wheelX, truck.y + truck.height + wheelRadius, 10, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        });
+    }
+
+    drawTruck2Ladder(truck) {
+        const ladder = truck.ladder;
+
+        // Ladder anchored to back of truck
+        const anchorX = truck.x + truck.width - 40;
+        const anchorY = truck.y - 5;
+
+        // Calculate current total length
+        const totalLength = ladder.baseLength + ladder.extensionLength;
+
+        // Convert angle to radians
+        const angleRad = (ladder.angle * Math.PI) / 180;
+
+        // Calculate end point
+        const endX = anchorX + Math.cos(angleRad) * totalLength;
+        const endY = anchorY - Math.sin(angleRad) * totalLength;
+
+        // Draw base ladder section (dual rails)
+        this.ctx.strokeStyle = '#95a5a6'; // Gray metal
+        this.ctx.lineWidth = 6;
+
+        // Left rail (base section)
+        this.ctx.beginPath();
+        const baseEndX = anchorX + Math.cos(angleRad) * ladder.baseLength;
+        const baseEndY = anchorY - Math.sin(angleRad) * ladder.baseLength;
+        this.ctx.moveTo(anchorX - 3, anchorY);
+        this.ctx.lineTo(baseEndX - 3, baseEndY);
+        this.ctx.stroke();
+
+        // Right rail (base section)
+        this.ctx.beginPath();
+        this.ctx.moveTo(anchorX + 3, anchorY);
+        this.ctx.lineTo(baseEndX + 3, baseEndY);
+        this.ctx.stroke();
+
+        // Draw extension section if extended (narrower for telescoping effect)
+        if (ladder.extensionLength > 0) {
+            this.ctx.strokeStyle = '#7f8c8d'; // Slightly darker
+            this.ctx.lineWidth = 5; // Narrower
+
+            // Left rail (extension)
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseEndX - 2.5, baseEndY);
+            this.ctx.lineTo(endX - 2.5, endY);
+            this.ctx.stroke();
+
+            // Right rail (extension)
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseEndX + 2.5, baseEndY);
+            this.ctx.lineTo(endX + 2.5, endY);
+            this.ctx.stroke();
+
+            // Draw connecting bracket
+            this.ctx.fillStyle = '#34495e';
+            this.ctx.beginPath();
+            this.ctx.arc(baseEndX, baseEndY, 7, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
+        // Draw rungs on entire ladder
+        const rungSpacing = 15; // One rung every 15px
+        const rungCount = Math.floor(totalLength / rungSpacing);
+        this.ctx.strokeStyle = '#7f8c8d';
+        this.ctx.lineWidth = 3;
+
+        for (let i = 1; i < rungCount; i++) {
+            const t = (i * rungSpacing) / totalLength;
+            const rungCenterX = anchorX + Math.cos(angleRad) * (totalLength * t);
+            const rungCenterY = anchorY - Math.sin(angleRad) * (totalLength * t);
+
+            // Perpendicular rung (8px wide)
+            const perpAngle = angleRad + Math.PI / 2;
+            const rungStartX = rungCenterX + Math.cos(perpAngle) * 4;
+            const rungStartY = rungCenterY - Math.sin(perpAngle) * 4;
+            const rungEndX = rungCenterX - Math.cos(perpAngle) * 4;
+            const rungEndY = rungCenterY + Math.sin(perpAngle) * 4;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(rungStartX, rungStartY);
+            this.ctx.lineTo(rungEndX, rungEndY);
+            this.ctx.stroke();
+        }
+
+        // Draw base mounting bracket
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(anchorX - 8, anchorY - 4, 16, 8);
+
+        // Draw water cannon at ladder tip (if ladder is extended)
+        if (ladder.extensionComplete) {
+            this.drawWaterCannon(endX, endY, angleRad);
+        }
+    }
+
+    drawWaterCannon(x, y, angle) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.rotate(angle);
+
+        // Cannon body
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(0, -5, 20, 10);
+
+        // Cannon nozzle
+        this.ctx.fillStyle = '#2c3e50';
+        this.ctx.fillRect(18, -3, 8, 6);
+
+        // Mounting bracket
+        this.ctx.fillStyle = '#95a5a6';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+
+    drawRadioButton() {
+        const rb = this.radioButton;
+
+        // Background circle
+        this.ctx.fillStyle = rb.isHovered ? '#3498db' : '#2c3e50';
+        this.ctx.beginPath();
+        this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, 25, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Border
+        this.ctx.strokeStyle = '#ecf0f1';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        // Radio waves icon (3 arcs)
+        this.ctx.strokeStyle = '#ecf0f1';
+        this.ctx.lineWidth = 2;
+        for (let i = 1; i <= 3; i++) {
+            const radius = 8 + i * 4;
+            const opacity = 1 - (i * 0.2);
+            this.ctx.strokeStyle = `rgba(236, 240, 241, ${opacity})`;
+            this.ctx.beginPath();
+            this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, radius, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+
+        // Center dot
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.beginPath();
+        this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Label text
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.font = 'bold 11px Arial';
+        this.ctx.textAlign = 'center';
+        const labelText = this.truck2.hasArrived ? 'Ladder' : 'Call Truck';
+        this.ctx.fillText(labelText, rb.x + rb.width / 2, rb.y + rb.height + 15);
+        this.ctx.textAlign = 'start';
+    }
+
     drawHydrant() {
         if (this.hydrantStyle === 'modern') {
             this.drawModernHydrant();
