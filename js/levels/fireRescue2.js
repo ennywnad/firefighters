@@ -117,13 +117,15 @@ class FireRescueLevel {
             }
         };
 
-        // Radio button for calling truck2
-        this.radioButton = {
+        // Walkie-talkie for calling truck2
+        this.walkieTalkie = {
             x: 0, // Will be set based on canvas width
             y: 0, // Will be set based on canvas height
-            width: 60,
-            height: 60,
-            isHovered: false
+            width: 50,
+            height: 85,
+            antennaHeight: 25,
+            isHovered: false,
+            isPttPressed: false // PTT = Push To Talk button
         };
 
         this.hydrant = {
@@ -893,9 +895,9 @@ class FireRescueLevel {
             this.truck2.x = width + 200; // Start off-screen right
         }
 
-        // Update radio button position (bottom-right corner)
-        this.radioButton.x = width - 80;
-        this.radioButton.y = height - 80;
+        // Update walkie-talkie position (bottom-right corner on the ground)
+        this.walkieTalkie.x = width - 70;
+        this.walkieTalkie.y = height - 95; // Position on the grey ground
 
         this.hydrant.y = height - 160;
         this.hydrant.port.y = this.hydrant.y + 30;
@@ -1092,12 +1094,21 @@ class FireRescueLevel {
     handleClick(e) {
         const pos = this.getMousePos(e);
 
-        // Check radio button click (always available)
-        const rb = this.radioButton;
-        const rbCenterX = rb.x + rb.width / 2;
-        const rbCenterY = rb.y + rb.height / 2;
-        const distToRadio = Math.hypot(pos.x - rbCenterX, pos.y - rbCenterY);
-        if (distToRadio <= 25) {
+        // Check walkie-talkie click (always available, larger hit area)
+        const wt = this.walkieTalkie;
+        const wtRect = {
+            x: wt.x - 5, // Add padding for easier clicking
+            y: wt.y - wt.antennaHeight - 5,
+            width: wt.width + 10,
+            height: wt.height + wt.antennaHeight + 10
+        };
+        if (this.isInRect(pos, wtRect)) {
+            // Visual feedback - press the PTT button
+            this.walkieTalkie.isPttPressed = true;
+            setTimeout(() => {
+                this.walkieTalkie.isPttPressed = false;
+            }, 150);
+
             if (!this.truck2.hasArrived) {
                 this.callTruck2();
             } else {
@@ -1165,12 +1176,15 @@ class FireRescueLevel {
 
         this.mouse = this.getMousePos(e);
 
-        // Check if hovering over radio button
-        const rb = this.radioButton;
-        const rbCenterX = rb.x + rb.width / 2;
-        const rbCenterY = rb.y + rb.height / 2;
-        const distToRadio = Math.hypot(this.mouse.x - rbCenterX, this.mouse.y - rbCenterY);
-        this.radioButton.isHovered = distToRadio <= 25;
+        // Check if hovering over walkie-talkie
+        const wt = this.walkieTalkie;
+        const wtRect = {
+            x: wt.x - 5,
+            y: wt.y - wt.antennaHeight - 5,
+            width: wt.width + 10,
+            height: wt.height + wt.antennaHeight + 10
+        };
+        this.walkieTalkie.isHovered = this.isInRect(this.mouse, wtRect);
 
         if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
             this.updateNozzleAngle();
@@ -1573,7 +1587,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.drawWater();
         this.drawFires();
         this.drawHighlights();
-        this.drawRadioButton(); // Draw radio button
+        this.drawWalkieTalkie(); // Draw walkie-talkie
 
         // Draw developer measurements if enabled
         if (this.developerMode) {
@@ -1608,9 +1622,9 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
 
-        // Cab
+        // Cab (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 80, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
 
         // Emergency lights on cab roof (smaller for classic truck)
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
@@ -1621,8 +1635,8 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 90, this.truck.y - 25, 2, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 110, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 115, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 135, this.truck.y - 25, 2, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Wheels
@@ -1660,13 +1674,13 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 40, 25, 25);
         this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 40, 25, 25);
 
-        // Cab with more detail
+        // Cab with more detail (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 80, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
 
         // Cab windows
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(this.truck.x + 85, this.truck.y - 15, 30, 20);
+        this.ctx.fillRect(this.truck.x + 110, this.truck.y - 15, 30, 20);
 
         // Horizontal ladder on top
         const ladderY = this.truck.y - 8;
@@ -1712,9 +1726,9 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Bumper
+        // Bumper (at right edge)
         this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(this.truck.x + 75, this.truck.y + this.truck.height - 5, 50, 8);
+        this.ctx.fillRect(this.truck.x + 100, this.truck.y + this.truck.height - 5, 45, 8);
 
         // Hose coil
         if (this.gameState === 'START') {
@@ -1750,13 +1764,13 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(truck.x + 10, truck.y + 43, 28, 28);
         this.ctx.strokeRect(truck.x + 43, truck.y + 43, 28, 28);
 
-        // Cab with more detail
+        // Cab with more detail (at right edge)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(truck.x + 85, truck.y - 22, 45, 32);
+        this.ctx.fillRect(truck.x + 115, truck.y - 22, 45, 32);
 
         // Cab windows
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(truck.x + 90, truck.y - 17, 35, 22);
+        this.ctx.fillRect(truck.x + 120, truck.y - 17, 35, 22);
 
         // Emergency lights on top (flash during arrival or when ladder is active)
         const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
@@ -1767,16 +1781,16 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(truck.x + 100, truck.y - 25, 3, 0, Math.PI * 2);
-        this.ctx.arc(truck.x + 115, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 130, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 145, truck.y - 25, 3, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Wheels with rotation animation
         this.drawTruck2Wheels(truck);
 
-        // Bumper
+        // Bumper (at right edge)
         this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(truck.x + 80, truck.y + truck.height - 5, 55, 8);
+        this.ctx.fillRect(truck.x + 110, truck.y + truck.height - 5, 50, 8);
 
         // Draw the extending ladder
         this.drawTruck2Ladder(truck);
@@ -1827,8 +1841,8 @@ ${this.firesExtinguished === this.totalFires ?
     drawTruck2Ladder(truck) {
         const ladder = truck.ladder;
 
-        // Ladder anchored to back of truck
-        const anchorX = truck.x + truck.width - 40;
+        // Ladder anchored to left side of truck (raises on the left)
+        const anchorX = truck.x + 20;
         const anchorY = truck.y - 5;
 
         // Calculate current total length
@@ -1837,8 +1851,8 @@ ${this.firesExtinguished === this.totalFires ?
         // Convert angle to radians
         const angleRad = (ladder.angle * Math.PI) / 180;
 
-        // Calculate end point
-        const endX = anchorX + Math.cos(angleRad) * totalLength;
+        // Calculate end point (extends to the LEFT to face truck1)
+        const endX = anchorX - Math.cos(angleRad) * totalLength;
         const endY = anchorY - Math.sin(angleRad) * totalLength;
 
         // Draw base ladder section (dual rails)
@@ -1847,7 +1861,7 @@ ${this.firesExtinguished === this.totalFires ?
 
         // Left rail (base section)
         this.ctx.beginPath();
-        const baseEndX = anchorX + Math.cos(angleRad) * ladder.baseLength;
+        const baseEndX = anchorX - Math.cos(angleRad) * ladder.baseLength;
         const baseEndY = anchorY - Math.sin(angleRad) * ladder.baseLength;
         this.ctx.moveTo(anchorX - 3, anchorY);
         this.ctx.lineTo(baseEndX - 3, baseEndY);
@@ -1891,7 +1905,7 @@ ${this.firesExtinguished === this.totalFires ?
 
         for (let i = 1; i < rungCount; i++) {
             const t = (i * rungSpacing) / totalLength;
-            const rungCenterX = anchorX + Math.cos(angleRad) * (totalLength * t);
+            const rungCenterX = anchorX - Math.cos(angleRad) * (totalLength * t);
             const rungCenterY = anchorY - Math.sin(angleRad) * (totalLength * t);
 
             // Perpendicular rung (8px wide)
@@ -1920,7 +1934,8 @@ ${this.firesExtinguished === this.totalFires ?
     drawWaterCannon(x, y, angle) {
         this.ctx.save();
         this.ctx.translate(x, y);
-        this.ctx.rotate(angle);
+        // Rotate to face left (opposite direction)
+        this.ctx.rotate(Math.PI - angle);
 
         // Cannon body
         this.ctx.fillStyle = '#34495e';
@@ -1939,44 +1954,119 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.restore();
     }
 
-    drawRadioButton() {
-        const rb = this.radioButton;
+    drawWalkieTalkie() {
+        const wt = this.walkieTalkie;
+        const x = wt.x;
+        const y = wt.y;
+        const w = wt.width;
+        const h = wt.height;
 
-        // Background circle
-        this.ctx.fillStyle = rb.isHovered ? '#3498db' : '#2c3e50';
-        this.ctx.beginPath();
-        this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, 25, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Shadow for depth
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.fillRect(x + 2, y + 2, w, h);
+
+        // Main body (boxy shape)
+        this.ctx.fillStyle = wt.isHovered ? '#2c3e50' : '#34495e';
+        this.ctx.fillRect(x, y, w, h);
 
         // Border
-        this.ctx.strokeStyle = '#ecf0f1';
+        this.ctx.strokeStyle = '#1c2833';
         this.ctx.lineWidth = 2;
-        this.ctx.stroke();
+        this.ctx.strokeRect(x, y, w, h);
 
-        // Radio waves icon (3 arcs)
-        this.ctx.strokeStyle = '#ecf0f1';
-        this.ctx.lineWidth = 2;
-        for (let i = 1; i <= 3; i++) {
-            const radius = 8 + i * 4;
-            const opacity = 1 - (i * 0.2);
-            this.ctx.strokeStyle = `rgba(236, 240, 241, ${opacity})`;
+        // Top section (slightly darker)
+        this.ctx.fillStyle = '#2c3e50';
+        this.ctx.fillRect(x, y, w, 25);
+
+        // Antenna
+        this.ctx.fillStyle = '#95a5a6';
+        this.ctx.fillRect(x + w / 2 - 2, y - wt.antennaHeight, 4, wt.antennaHeight);
+
+        // Antenna tip
+        this.ctx.fillStyle = '#7f8c8d';
+        this.ctx.beginPath();
+        this.ctx.arc(x + w / 2, y - wt.antennaHeight, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Speaker grill (mesh pattern)
+        const grillX = x + 8;
+        const grillY = y + 5;
+        const grillW = w - 16;
+        const grillH = 15;
+
+        this.ctx.fillStyle = '#1c2833';
+        this.ctx.fillRect(grillX, grillY, grillW, grillH);
+
+        // Mesh lines
+        this.ctx.strokeStyle = '#34495e';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+            const lineY = grillY + 2 + (i * 1.5);
             this.ctx.beginPath();
-            this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, radius, 0, Math.PI * 2);
+            this.ctx.moveTo(grillX + 1, lineY);
+            this.ctx.lineTo(grillX + grillW - 1, lineY);
             this.ctx.stroke();
         }
 
-        // Center dot
-        this.ctx.fillStyle = '#ecf0f1';
-        this.ctx.beginPath();
-        this.ctx.arc(rb.x + rb.width / 2, rb.y + rb.height / 2, 4, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Display screen (small LED/LCD)
+        const displayX = x + 8;
+        const displayY = y + 28;
+        const displayW = w - 16;
+        const displayH = 8;
 
-        // Label text
-        this.ctx.fillStyle = '#ecf0f1';
-        this.ctx.font = 'bold 11px Arial';
+        this.ctx.fillStyle = '#0e1111';
+        this.ctx.fillRect(displayX, displayY, displayW, displayH);
+
+        // Display text or indicator
+        if (this.truck2.hasArrived) {
+            this.ctx.fillStyle = '#27ae60'; // Green when truck arrived
+        } else {
+            this.ctx.fillStyle = '#e74c3c'; // Red when idle
+        }
+        this.ctx.fillRect(displayX + 2, displayY + 2, 4, 4);
+
+        // PTT Button (Push To Talk) - main interaction button
+        const pttX = x + 10;
+        const pttY = y + 45;
+        const pttW = w - 20;
+        const pttH = 25;
+
+        // Button pressed effect
+        if (wt.isPttPressed) {
+            this.ctx.fillStyle = '#c0392b';
+            this.ctx.fillRect(pttX + 1, pttY + 1, pttW, pttH);
+        } else {
+            // Button shadow
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.fillRect(pttX + 2, pttY + 2, pttW, pttH);
+
+            // Button face
+            this.ctx.fillStyle = wt.isHovered ? '#e67e22' : '#e74c3c';
+            this.ctx.fillRect(pttX, pttY, pttW, pttH);
+        }
+
+        // Button border
+        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(pttX, pttY, pttW, pttH);
+
+        // PTT label on button
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 10px Arial';
         this.ctx.textAlign = 'center';
-        const labelText = this.truck2.hasArrived ? 'Ladder' : 'Call Truck';
-        this.ctx.fillText(labelText, rb.x + rb.width / 2, rb.y + rb.height + 15);
+        this.ctx.fillText('PTT', x + w / 2, pttY + 16);
+
+        // Side clips/details
+        this.ctx.fillStyle = '#1c2833';
+        this.ctx.fillRect(x - 2, y + 15, 2, 10);
+        this.ctx.fillRect(x + w, y + 15, 2, 10);
+
+        // Status text below
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.font = 'bold 9px Arial';
+        this.ctx.textAlign = 'center';
+        const statusText = this.truck2.hasArrived ? 'TRUCK READY' : 'CALL TRUCK';
+        this.ctx.fillText(statusText, x + w / 2, y + h + 10);
         this.ctx.textAlign = 'start';
     }
 
