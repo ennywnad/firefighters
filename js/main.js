@@ -51,65 +51,79 @@ function startFireRescueGame() {
     currentFireGame.onDebugModeChange = updateDebugButtonFromGame;
     currentFireGame.onTruckStyleChange = updateTruckStyleRadiosFromGame;
 
-    // Set up truck style radio buttons
+    // Set up all option radio buttons
     setupTruckStyleRadios();
-
-    // Set up fun option checkboxes
     setupFunOptions();
+    setupHydrantStyleRadios();
+    setupDebugModeRadios();
+    setupVoiceRadios();
+    setupWaterSoundRadios();
 
-    // Set up hydrant style dropdown
-    setupHydrantStyleSelect();
-
-    // Initialize button states
-    updateDebugButtonFromGame();
+    // Initialize states
     updateTruckStyleRadiosFromGame();
 
     toggleBackgroundMusic(true);
 }
 
-// Debug toggle functionality - connects to actual game debug mode
-document.getElementById('debug-toggle-button').addEventListener('click', () => {
-    if (currentFireGame) {
-        currentFireGame.toggleDeveloperMode();
+// Debug mode radio functionality
+function setupDebugModeRadios() {
+    const debugOnRadio = document.getElementById('debug-on-radio');
+    const debugOffRadio = document.getElementById('debug-off-radio');
+
+    if (debugOnRadio && debugOffRadio) {
+        // Set initial value from localStorage
+        const savedDebug = localStorage.getItem('firefighterDebugMode') === 'true';
+        debugOnRadio.checked = savedDebug;
+        debugOffRadio.checked = !savedDebug;
+
+        // Handle debug mode changes
+        debugOnRadio.addEventListener('change', () => {
+            if (debugOnRadio.checked && currentFireGame) {
+                if (!currentFireGame.developerMode) {
+                    currentFireGame.toggleDeveloperMode();
+                }
+            }
+        });
+
+        debugOffRadio.addEventListener('change', () => {
+            if (debugOffRadio.checked && currentFireGame) {
+                if (currentFireGame.developerMode) {
+                    currentFireGame.toggleDeveloperMode();
+                }
+            }
+        });
     }
-});
-
-function updateDebugButtonFromGame() {
-    const statusSpan = document.getElementById('debug-status');
-    const button = document.getElementById('debug-toggle-button');
-
-    if (!currentFireGame) return;
-
-    const isDebugOn = currentFireGame.developerMode;
-
-    if (isDebugOn) {
-        statusSpan.textContent = 'ON';
-        statusSpan.style.color = '#27ae60';
-        button.style.backgroundColor = '#27ae60';
-    } else {
-        statusSpan.textContent = 'OFF';
-        statusSpan.style.color = '#e74c3c';
-        button.style.backgroundColor = '#e74c3c';
-    }
-
-    // Save to localStorage for persistence
-    localStorage.setItem('firefighterDebugMode', isDebugOn.toString());
 }
 
-// Truck style radio button functionality
+function updateDebugButtonFromGame() {
+    const debugOnRadio = document.getElementById('debug-on-radio');
+    const debugOffRadio = document.getElementById('debug-off-radio');
+
+    if (!currentFireGame || !debugOnRadio || !debugOffRadio) return;
+
+    debugOnRadio.checked = currentFireGame.developerMode;
+    debugOffRadio.checked = !currentFireGame.developerMode;
+    localStorage.setItem('firefighterDebugMode', currentFireGame.developerMode.toString());
+}
+
+// Truck style radio functionality
 function setupTruckStyleRadios() {
     const classicRadio = document.getElementById('truck-classic-radio');
     const detailedRadio = document.getElementById('truck-detailed-radio');
 
-    if (classicRadio) {
+    if (classicRadio && detailedRadio) {
+        // Set initial value from localStorage
+        const savedStyle = localStorage.getItem('firefighterTruckStyle') || 'classic';
+        classicRadio.checked = (savedStyle === 'classic');
+        detailedRadio.checked = (savedStyle === 'detailed');
+
+        // Handle truck style changes
         classicRadio.addEventListener('change', () => {
             if (classicRadio.checked && currentFireGame) {
                 currentFireGame.setTruckStyle('classic');
             }
         });
-    }
 
-    if (detailedRadio) {
         detailedRadio.addEventListener('change', () => {
             if (detailedRadio.checked && currentFireGame) {
                 currentFireGame.setTruckStyle('detailed');
@@ -122,20 +136,16 @@ function updateTruckStyleRadiosFromGame() {
     const classicRadio = document.getElementById('truck-classic-radio');
     const detailedRadio = document.getElementById('truck-detailed-radio');
 
-    if (!currentFireGame) return;
+    if (!currentFireGame || !classicRadio || !detailedRadio) return;
 
-    // Update radio button selection based on current or pending style
+    // Update radio based on current or pending style
     let targetStyle = currentFireGame.truckStyle;
     if (currentFireGame.pendingTruckStyleChange) {
         targetStyle = currentFireGame.truckStyle === 'classic' ? 'detailed' : 'classic';
     }
 
-    if (classicRadio && detailedRadio) {
-        classicRadio.checked = (targetStyle === 'classic');
-        detailedRadio.checked = (targetStyle === 'detailed');
-    }
-
-    // Save to localStorage for persistence
+    classicRadio.checked = (targetStyle === 'classic');
+    detailedRadio.checked = (targetStyle === 'detailed');
     localStorage.setItem('firefighterTruckStyle', currentFireGame.truckStyle);
 }
 
@@ -302,48 +312,60 @@ function startFireGame() {
 
 // Voice control setup function
 function setupVoiceControls() {
-    if (!window.voiceGuide) return;
+    // This is called from DOMContentLoaded, before the game starts
+    // The actual setup happens in setupVoiceRadios()
+}
 
-    const checkbox = document.getElementById('voice-enabled-checkbox');
-    const volumeSlider = document.getElementById('voice-volume-slider');
-    const speedSlider = document.getElementById('voice-speed-slider');
-    const pitchSlider = document.getElementById('voice-pitch-slider');
-    const testButton = document.getElementById('test-voice-button');
+function setupVoiceRadios() {
+    const voiceOnRadio = document.getElementById('voice-on-radio');
+    const voiceOffRadio = document.getElementById('voice-off-radio');
 
-    if (checkbox) {
-        checkbox.checked = window.voiceGuide.getEnabled();
-        checkbox.addEventListener('change', () => {
-            window.voiceGuide.setEnabled(checkbox.checked);
+    if (voiceOnRadio && voiceOffRadio && window.voiceGuide) {
+        // Set initial value
+        const enabled = window.voiceGuide.getEnabled();
+        voiceOnRadio.checked = enabled;
+        voiceOffRadio.checked = !enabled;
+
+        // Handle voice toggle changes
+        voiceOnRadio.addEventListener('change', () => {
+            if (voiceOnRadio.checked) {
+                window.voiceGuide.setEnabled(true);
+            }
+        });
+
+        voiceOffRadio.addEventListener('change', () => {
+            if (voiceOffRadio.checked) {
+                window.voiceGuide.setEnabled(false);
+            }
         });
     }
+}
 
-    if (volumeSlider) {
-        volumeSlider.value = window.voiceGuide.volume;
-        volumeSlider.addEventListener('input', () => {
-            window.voiceGuide.volume = parseFloat(volumeSlider.value);
-            window.voiceGuide.saveSettings();
+function setupWaterSoundRadios() {
+    const whiteRadio = document.getElementById('sound-white-radio');
+    const pinkRadio = document.getElementById('sound-pink-radio');
+    const brownRadio = document.getElementById('sound-brown-radio');
+    const offRadio = document.getElementById('sound-off-radio');
+
+    const radios = [whiteRadio, pinkRadio, brownRadio, offRadio];
+
+    if (radios.every(r => r)) {
+        // Set initial value from localStorage
+        const savedSound = localStorage.getItem('waterSoundType') || 'white';
+        radios.forEach(radio => {
+            radio.checked = (radio.value === savedSound);
         });
-    }
 
-    if (speedSlider) {
-        speedSlider.value = window.voiceGuide.rate;
-        speedSlider.addEventListener('input', () => {
-            window.voiceGuide.rate = parseFloat(speedSlider.value);
-            window.voiceGuide.saveSettings();
-        });
-    }
-
-    if (pitchSlider) {
-        pitchSlider.value = window.voiceGuide.pitch;
-        pitchSlider.addEventListener('input', () => {
-            window.voiceGuide.pitch = parseFloat(pitchSlider.value);
-            window.voiceGuide.saveSettings();
-        });
-    }
-
-    if (testButton) {
-        testButton.addEventListener('click', () => {
-            window.voiceGuide.testVoice("This is a test of the voice guidance system for Fire Rescue!");
+        // Handle sound changes
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    localStorage.setItem('waterSoundType', radio.value);
+                    if (currentFireGame) {
+                        currentFireGame.waterSynth = currentFireGame.createWaterSynth();
+                    }
+                }
+            });
         });
     }
 }
@@ -352,68 +374,127 @@ function restartFireRescue() {
     startFireRescueGame();
 }
 
-// Fire truck click handler
-function setupHydrantStyleSelect() {
-    const hydrantSelect = document.getElementById('hydrant-style-select');
+// Hydrant style radio buttons
+function setupHydrantStyleRadios() {
+    const classicRadio = document.getElementById('hydrant-classic-radio');
+    const modernRadio = document.getElementById('hydrant-modern-radio');
 
-    if (hydrantSelect) {
+    if (classicRadio && modernRadio) {
         // Set initial value from localStorage
         const savedStyle = localStorage.getItem('firefighterHydrantStyle') || 'classic';
-        hydrantSelect.value = savedStyle;
+        classicRadio.checked = (savedStyle === 'classic');
+        modernRadio.checked = (savedStyle === 'modern');
 
         // Handle hydrant style changes
-        hydrantSelect.addEventListener('change', () => {
-            if (currentFireGame) {
-                currentFireGame.hydrantStyle = hydrantSelect.value;
-                localStorage.setItem('firefighterHydrantStyle', hydrantSelect.value);
+        classicRadio.addEventListener('change', () => {
+            if (classicRadio.checked && currentFireGame) {
+                currentFireGame.hydrantStyle = 'classic';
+                localStorage.setItem('firefighterHydrantStyle', 'classic');
+            }
+        });
+
+        modernRadio.addEventListener('change', () => {
+            if (modernRadio.checked && currentFireGame) {
+                currentFireGame.hydrantStyle = 'modern';
+                localStorage.setItem('firefighterHydrantStyle', 'modern');
             }
         });
     }
 }
 
 function setupFunOptions() {
-    const doubleSprayCheckbox = document.getElementById('double-spray-checkbox');
-    const slowLightsCheckbox = document.getElementById('slow-lights-checkbox');
-    const fireSpreadCheckbox = document.getElementById('fire-spread-checkbox');
-    const emergencyLightsCheckbox = document.getElementById('emergency-lights-checkbox');
+    // Double spray radios
+    const doubleSprayOnRadio = document.getElementById('double-spray-on-radio');
+    const doubleSprayOffRadio = document.getElementById('double-spray-off-radio');
 
-    // Set initial states from localStorage
-    if (doubleSprayCheckbox) {
-        doubleSprayCheckbox.checked = localStorage.getItem('firefighterDoubleSpray') === 'true';
-        doubleSprayCheckbox.addEventListener('change', () => {
-            if (currentFireGame) {
-                currentFireGame.doubleSpray = doubleSprayCheckbox.checked;
-                localStorage.setItem('firefighterDoubleSpray', doubleSprayCheckbox.checked.toString());
+    if (doubleSprayOnRadio && doubleSprayOffRadio) {
+        const savedDoubleSpray = localStorage.getItem('firefighterDoubleSpray') === 'true';
+        doubleSprayOnRadio.checked = savedDoubleSpray;
+        doubleSprayOffRadio.checked = !savedDoubleSpray;
+
+        doubleSprayOnRadio.addEventListener('change', () => {
+            if (doubleSprayOnRadio.checked && currentFireGame) {
+                currentFireGame.doubleSpray = true;
+                localStorage.setItem('firefighterDoubleSpray', 'true');
+            }
+        });
+
+        doubleSprayOffRadio.addEventListener('change', () => {
+            if (doubleSprayOffRadio.checked && currentFireGame) {
+                currentFireGame.doubleSpray = false;
+                localStorage.setItem('firefighterDoubleSpray', 'false');
             }
         });
     }
 
-    if (slowLightsCheckbox) {
-        slowLightsCheckbox.checked = localStorage.getItem('firefighterSlowLights') === 'true';
-        slowLightsCheckbox.addEventListener('change', () => {
-            if (currentFireGame) {
-                currentFireGame.slowLights = slowLightsCheckbox.checked;
-                localStorage.setItem('firefighterSlowLights', slowLightsCheckbox.checked.toString());
+    // Slow lights radios
+    const slowLightsOnRadio = document.getElementById('slow-lights-on-radio');
+    const slowLightsOffRadio = document.getElementById('slow-lights-off-radio');
+
+    if (slowLightsOnRadio && slowLightsOffRadio) {
+        const savedSlowLights = localStorage.getItem('firefighterSlowLights') === 'true';
+        slowLightsOnRadio.checked = savedSlowLights;
+        slowLightsOffRadio.checked = !savedSlowLights;
+
+        slowLightsOnRadio.addEventListener('change', () => {
+            if (slowLightsOnRadio.checked && currentFireGame) {
+                currentFireGame.slowLights = true;
+                localStorage.setItem('firefighterSlowLights', 'true');
+            }
+        });
+
+        slowLightsOffRadio.addEventListener('change', () => {
+            if (slowLightsOffRadio.checked && currentFireGame) {
+                currentFireGame.slowLights = false;
+                localStorage.setItem('firefighterSlowLights', 'false');
             }
         });
     }
 
-    if (fireSpreadCheckbox) {
-        fireSpreadCheckbox.checked = localStorage.getItem('firefighterFireSpread') === 'true';
-        fireSpreadCheckbox.addEventListener('change', () => {
-            if (currentFireGame) {
-                currentFireGame.fireSpread = fireSpreadCheckbox.checked;
-                localStorage.setItem('firefighterFireSpread', fireSpreadCheckbox.checked.toString());
+    // Fire spread radios
+    const fireSpreadOnRadio = document.getElementById('fire-spread-on-radio');
+    const fireSpreadOffRadio = document.getElementById('fire-spread-off-radio');
+
+    if (fireSpreadOnRadio && fireSpreadOffRadio) {
+        const savedFireSpread = localStorage.getItem('firefighterFireSpread') === 'true';
+        fireSpreadOnRadio.checked = savedFireSpread;
+        fireSpreadOffRadio.checked = !savedFireSpread;
+
+        fireSpreadOnRadio.addEventListener('change', () => {
+            if (fireSpreadOnRadio.checked && currentFireGame) {
+                currentFireGame.fireSpread = true;
+                localStorage.setItem('firefighterFireSpread', 'true');
+            }
+        });
+
+        fireSpreadOffRadio.addEventListener('change', () => {
+            if (fireSpreadOffRadio.checked && currentFireGame) {
+                currentFireGame.fireSpread = false;
+                localStorage.setItem('firefighterFireSpread', 'false');
             }
         });
     }
 
-    if (emergencyLightsCheckbox) {
-        emergencyLightsCheckbox.checked = localStorage.getItem('firefighterEmergencyLights') === 'true';
-        emergencyLightsCheckbox.addEventListener('change', () => {
-            if (currentFireGame) {
-                currentFireGame.emergencyLights = emergencyLightsCheckbox.checked;
-                localStorage.setItem('firefighterEmergencyLights', emergencyLightsCheckbox.checked.toString());
+    // Emergency lights radios
+    const emergencyLightsOnRadio = document.getElementById('emergency-lights-on-radio');
+    const emergencyLightsOffRadio = document.getElementById('emergency-lights-off-radio');
+
+    if (emergencyLightsOnRadio && emergencyLightsOffRadio) {
+        const savedEmergencyLights = localStorage.getItem('firefighterEmergencyLights') === 'true';
+        emergencyLightsOnRadio.checked = savedEmergencyLights;
+        emergencyLightsOffRadio.checked = !savedEmergencyLights;
+
+        emergencyLightsOnRadio.addEventListener('change', () => {
+            if (emergencyLightsOnRadio.checked && currentFireGame) {
+                currentFireGame.emergencyLights = true;
+                localStorage.setItem('firefighterEmergencyLights', 'true');
+            }
+        });
+
+        emergencyLightsOffRadio.addEventListener('change', () => {
+            if (emergencyLightsOffRadio.checked && currentFireGame) {
+                currentFireGame.emergencyLights = false;
+                localStorage.setItem('firefighterEmergencyLights', 'false');
             }
         });
     }

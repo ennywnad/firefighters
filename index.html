@@ -14,77 +14,150 @@
     <!-- Options Menu -->
     <div id="options-screen" class="game-screen menu-background hidden">
         <h1 class="menu-title">Options</h1>
-        
-        
-        <div class="options-section">
-            <h2>🔊 Audio</h2>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <span style="color: white; font-size: 1.2rem;">Voice Guide:</span>
-                <label style="display: flex; align-items: center;">
-                    <input type="checkbox" id="voice-enabled-checkbox" style="transform: scale(1.5);">
-                    <span style="color: white; margin-left: 8px;">On</span>
-                </label>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <span style="color: white; font-size: 1.2rem;">Water Sound:</span>
-                <select id="sound-select" style="font-family: 'Bangers', cursive; background-color: #34495e; color: white; border: 2px solid #FFD700; border-radius: 5px; padding: 5px;">
-                    <option value="white" selected>Default</option>
-                    <option value="pink">Deeper</option>
-                    <option value="brown">Rumbly</option>
-                    <option value="disable">Off</option>
-                </select>
-            </div>
-        </div>
 
         <div class="options-section">
-            <h2>🚒 Truck Style</h2>
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="truck-style" value="classic" id="truck-classic-radio" checked>
-                    <span class="radio-text">🚒 Classic Truck</span>
-                </label>
-                <label class="radio-option">
-                    <input type="radio" name="truck-style" value="detailed" id="truck-detailed-radio">
-                    <span class="radio-text">🚛 Detailed Truck</span>
-                </label>
+            <!-- Water Sound -->
+            <div class="option-row">
+                <span class="option-label">💧 Water Sound:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="water-sound" value="white" id="sound-white-radio" checked>
+                        <span class="radio-text">Default</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="water-sound" value="pink" id="sound-pink-radio">
+                        <span class="radio-text">Deeper</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="water-sound" value="brown" id="sound-brown-radio">
+                        <span class="radio-text">Rumbly</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="water-sound" value="disable" id="sound-off-radio">
+                        <span class="radio-text">Off</span>
+                    </label>
+                </div>
             </div>
-        </div>
 
-        <div class="options-section">
-            <h2>💧 Hydrant Style</h2>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <span style="color: white; font-size: 1.2rem;">Hydrant:</span>
-                <select id="hydrant-style-select" style="font-family: 'Bangers', cursive; background-color: #34495e; color: white; border: 2px solid #FFD700; border-radius: 5px; padding: 5px;">
-                    <option value="classic" selected>Classic</option>
-                    <option value="modern">Modern</option>
-                </select>
+            <!-- Voice -->
+            <div class="option-row">
+                <span class="option-label">🔊 Voice:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="voice-guide" value="true" id="voice-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="voice-guide" value="false" id="voice-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                </div>
             </div>
-        </div>
-        <div class="options-section">
-            <h2>🎮 Fun Options</h2>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <label style="display: flex; align-items: center; color: white;">
-                    <input type="checkbox" id="double-spray-checkbox" style="margin-right: 8px; transform: scale(1.2);">
-                    <span>💧 Double-Sized Water Spray</span>
-                </label>
-                <label style="display: flex; align-items: center; color: white;">
-                    <input type="checkbox" id="slow-lights-checkbox" style="margin-right: 8px; transform: scale(1.2);">
-                    <span>🏢 Slower Office Lights</span>
-                </label>
-                <label style="display: flex; align-items: center; color: white;">
-                    <input type="checkbox" id="fire-spread-checkbox" style="margin-right: 8px; transform: scale(1.2);">
-                    <span>🔥 Fires Spawn More Fires</span>
-                </label>
-                <label style="display: flex; align-items: center; color: white;">
-                    <input type="checkbox" id="emergency-lights-checkbox" style="margin-right: 8px; transform: scale(1.2);">
-                    <span>🚨 Continuous Emergency Lights</span>
-                </label>
-            </div>
-        </div>
 
-        <div class="options-section">
-            <h2>🔧 Debug</h2>
-            <button id="debug-toggle-button" class="menu-button-lg">Debug Mode: <span id="debug-status">OFF</span></button>
+            <!-- Truck -->
+            <div class="option-row">
+                <span class="option-label">🚒 Truck:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="truck-style" value="classic" id="truck-classic-radio" checked>
+                        <span class="radio-text">Classic</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="truck-style" value="detailed" id="truck-detailed-radio">
+                        <span class="radio-text">Detailed</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Hydrant -->
+            <div class="option-row">
+                <span class="option-label">🚰 Hydrant:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="hydrant-style" value="classic" id="hydrant-classic-radio" checked>
+                        <span class="radio-text">Classic</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="hydrant-style" value="modern" id="hydrant-modern-radio">
+                        <span class="radio-text">Modern</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Double Spray -->
+            <div class="option-row">
+                <span class="option-label">💦 2x Spray:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="double-spray" value="false" id="double-spray-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="double-spray" value="true" id="double-spray-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Slow Lights -->
+            <div class="option-row">
+                <span class="option-label">🏢 Slow Lights:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="slow-lights" value="false" id="slow-lights-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="slow-lights" value="true" id="slow-lights-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Fire Spread -->
+            <div class="option-row">
+                <span class="option-label">🔥 Fire Spread:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="fire-spread" value="false" id="fire-spread-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="fire-spread" value="true" id="fire-spread-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Emergency Lights -->
+            <div class="option-row">
+                <span class="option-label">🚨 Emergency:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="emergency-lights" value="false" id="emergency-lights-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="emergency-lights" value="true" id="emergency-lights-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Debug -->
+            <div class="option-row">
+                <span class="option-label">🔧 Debug:</span>
+                <div class="radio-group-inline">
+                    <label class="radio-option">
+                        <input type="radio" name="debug-mode" value="false" id="debug-off-radio" checked>
+                        <span class="radio-text">Off</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="debug-mode" value="true" id="debug-on-radio">
+                        <span class="radio-text">On</span>
+                    </label>
+                </div>
+            </div>
         </div>
 
         <button class="menu-button-lg back-button" onclick="hideOptionsOverlay()">Back to Game</button>

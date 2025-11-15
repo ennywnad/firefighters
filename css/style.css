@@ -19,9 +19,7 @@ body {
 #game-container {
     position: relative;
     width: 100%;
-    max-width: 800px;
     height: 100%;
-    max-height: 600px;
 }
 
 .game-screen {
@@ -757,8 +755,8 @@ canvas {
     background: rgba(0, 0, 0, 0.3);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 10px;
-    padding: 12px 16px;
-    width: 260px;
+    padding: 8px 12px;
+    width: auto;
     cursor: pointer;
     transition: all 0.3s ease;
     font-family: 'Bangers', cursive;
@@ -771,15 +769,15 @@ canvas {
 }
 
 .radio-option input[type="radio"] {
-    width: 20px;
-    height: 20px;
-    margin-right: 15px;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
     cursor: pointer;
 }
 
 .radio-option input[type="radio"]:checked + .radio-text {
-    color: #f39c12;
-    text-shadow: 2px 2px 0 #e67e22;
+    color: #ffffff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .radio-option:has(input[type="radio"]:checked) {
@@ -789,7 +787,7 @@ canvas {
 }
 
 .radio-text {
-    font-size: 1.3rem;
+    font-size: 1rem;
     color: white;
     font-weight: bold;
     transition: all 0.3s ease;
@@ -1074,12 +1072,39 @@ canvas {
 
 .options-section {
     margin: 15px 0;
-    padding: 15px;
+    padding: 20px;
     background-color: rgba(0, 0, 0, 0.4);
     border-radius: 15px;
     border: 2px solid rgba(255, 255, 255, 0.1);
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.option-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.option-label {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    min-width: 150px;
+}
+
+.radio-group-inline {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .options-section h2 {

@@ -21,7 +21,7 @@ class FireRescueLevel {
 
         // Truck entrance animation
         this.truckEntranceComplete = false;
-        this.truckTargetX = 100; // Final position
+        this.truckTargetX = 0; // Will be set dynamically based on canvas width
         this.truckStartX = -200; // Start off-screen to the left
         this.truckSpeed = 3; // pixels per frame
 
@@ -84,7 +84,8 @@ class FireRescueLevel {
         this.truck = {
             x: this.truckStartX, y: 400, width: 145, height: 80,
             hoseCoil: { x: this.truckStartX + 65, y: 430, radius: 20 },
-            port: { x: this.truckStartX + 115, y: 440, radius: 12 }
+            port: { x: this.truckStartX + 115, y: 440, radius: 12 },
+            wheelRotation: 0
         };
 
         // Second truck with extending ladder
@@ -113,7 +114,9 @@ class FireRescueLevel {
                 maxExtension: 60,
 
                 rotationComplete: false,
-                extensionComplete: false
+                extensionComplete: false,
+
+                cannonAngle: 0 // Water cannon angle (controlled by mouse)
             }
         };
 
@@ -131,7 +134,7 @@ class FireRescueLevel {
         this.hydrant = {
             x: 350, y: 420, width: 40, height: 60,
             port: { x: 350, y: 450, radius: 12 },
-            valve: { x: 330, y: 400, width: 30, height: 15 }
+            valve: { x: 370, y: 410, width: 20, height: 20 } // Pentagon nut on top
         };
         
         this.nozzle = { x: 200, y: 300, angle: 0, attachedToTruck: false };
@@ -496,8 +499,8 @@ class FireRescueLevel {
         const speed = -4; // Negative = moving left, 4px per frame
         this.truck2.x += speed;
 
-        // Animate wheel rotation
-        this.truck2.wheelRotation += 0.2;
+        // Animate wheel rotation (counter-clockwise when moving left)
+        this.truck2.wheelRotation -= 0.2;
 
         // Flash emergency lights
         this.truck2.lightFlash = !this.truck2.lightFlash;
@@ -884,40 +887,51 @@ class FireRescueLevel {
         this.canvas.height = height;
 
         // Update positions based on canvas size
+        // Center both trucks with spacing between them
+        const truckSpacing = 300; // Space between the two trucks
+        const centerX = width / 2;
+
+        // Position truck 1 to the left of center
+        this.truckTargetX = centerX - truckSpacing;
+        if (this.truckEntranceComplete) {
+            this.truck.x = this.truckTargetX;
+        }
+        // Always update hose coil and port to be relative to current truck position
+        this.truck.hoseCoil.x = this.truck.x + 65;
+        this.truck.port.x = this.truck.x + 115;
         this.truck.y = height - 180;
         this.truck.hoseCoil.y = this.truck.y + 30;
         this.truck.port.y = this.truck.y + 40;
 
-        // Update truck2 positions
-        this.truck2.y = height - 190; // Slightly lower to account for larger size
-        this.truck2.targetX = width / 2; // Middle of canvas
+        // Position truck 2 to the right of center
+        this.truck2.y = height - 190;
+        this.truck2.targetX = centerX + truckSpacing;
         if (!this.truck2.isActive) {
             this.truck2.x = width + 200; // Start off-screen right
+        } else if (this.truck2.hasArrived) {
+            // If truck2 has already arrived, update its position
+            this.truck2.x = this.truck2.targetX;
         }
 
         // Update walkie-talkie position (bottom-right corner on the ground)
         this.walkieTalkie.x = width - 70;
-        this.walkieTalkie.y = height - 95; // Position on the grey ground
+        this.walkieTalkie.y = height - 95;
 
+        // Position hydrant between the two trucks
+        this.hydrant.x = centerX - this.hydrant.width / 2;
         this.hydrant.y = height - 160;
+        this.hydrant.port.x = this.hydrant.x - 5; // Port is on the left side of the hydrant
         this.hydrant.port.y = this.hydrant.y + 30;
-        this.hydrant.valve.y = this.hydrant.y - 20;
+        this.hydrant.valve.x = this.hydrant.x + this.hydrant.width / 2 - this.hydrant.valve.width / 2;
+        this.hydrant.valve.y = this.hydrant.y - 12;
 
         this.nozzle.y = height - 300;
 
-        // Always update ladder and nozzle positions (they're always visible now)
+        // Always update ladder and nozzle positions
         this.setupTruckEquipment();
 
-        // Update building heights based on new canvas size
-        this.buildings.forEach((building, index) => {
-            const config = [
-                { height: 280 }, { height: 200 }, { height: 350 },
-                { height: 250 }, { height: 180 }, { height: 320 }, { height: 220 }
-            ][index];
-            if (config) {
-                building.y = height - config.height - 100;
-            }
-        });
+        // Regenerate buildings to fill the new width
+        this.buildings = this.createBuildings();
 
         // Reinitialize windows after building positions change
         if (this.windows) {
@@ -927,29 +941,40 @@ class FireRescueLevel {
     
     createBuildings() {
         const buildings = [];
+        const canvasWidth = this.canvas ? this.canvas.width : 800;
+        const canvasHeight = this.canvas ? this.canvas.height : 600;
+
         let currentX = -20; // Start slightly off-screen
-        
-        // Create buildings with varied spacing and heights like the legacy version
-        const buildingConfigs = [
-            { width: 80, height: 280, gap: 15 },   // Tall left building
-            { width: 120, height: 200, gap: 25 },  // Medium building
-            { width: 90, height: 350, gap: 20 },   // Very tall center building
-            { width: 110, height: 250, gap: 30 },  // Medium-tall building
-            { width: 100, height: 180, gap: 15 },  // Shorter building
-            { width: 85, height: 320, gap: 20 },   // Tall right building
-            { width: 75, height: 220, gap: 0 }     // Final building
+
+        // Building templates with varied heights for visual interest
+        const buildingTemplates = [
+            { width: 80, height: 280, gap: 15 },
+            { width: 120, height: 200, gap: 25 },
+            { width: 90, height: 350, gap: 20 },
+            { width: 110, height: 250, gap: 30 },
+            { width: 100, height: 180, gap: 15 },
+            { width: 85, height: 320, gap: 20 },
+            { width: 95, height: 240, gap: 25 },
+            { width: 75, height: 290, gap: 15 }
         ];
-        
-        buildingConfigs.forEach(config => {
+
+        let templateIndex = 0;
+
+        // Generate buildings until we fill the entire canvas width (plus some overflow)
+        while (currentX < canvasWidth + 100) {
+            const config = buildingTemplates[templateIndex % buildingTemplates.length];
+
             buildings.push({
                 x: currentX,
-                y: this.canvas ? this.canvas.height - config.height - 100 : 150,
+                y: canvasHeight - config.height - 100,
                 width: config.width,
                 height: config.height
             });
+
             currentX += config.width + config.gap;
-        });
-        
+            templateIndex++;
+        }
+
         return buildings;
     }
     
@@ -1223,6 +1248,25 @@ class FireRescueLevel {
         const dx = this.mouse.x - this.nozzle.x;
         const dy = this.mouse.y - this.nozzle.y;
         this.nozzle.angle = Math.atan2(dy, dx);
+
+        // Also update truck2's water cannon if ladder is extended
+        if (this.truck2.isActive && this.truck2.ladder.extensionComplete) {
+            const ladder = this.truck2.ladder;
+            const truck = this.truck2;
+
+            // Calculate cannon position
+            const anchorX = truck.x + truck.width - 20;
+            const anchorY = truck.y - 5;
+            const totalLength = ladder.baseLength + ladder.extensionLength;
+            const angleRad = (ladder.angle * Math.PI) / 180;
+            const cannonX = anchorX - Math.cos(angleRad) * totalLength;
+            const cannonY = anchorY - Math.sin(angleRad) * totalLength;
+
+            // Calculate angle from cannon to mouse
+            const cdx = this.mouse.x - cannonX;
+            const cdy = this.mouse.y - cannonY;
+            ladder.cannonAngle = Math.atan2(cdy, cdx);
+        }
     }
     
     isInCircle(pos, circle) {
@@ -1276,6 +1320,9 @@ class FireRescueLevel {
             this.truck.hoseCoil.x += this.truckSpeed;
             this.truck.port.x += this.truckSpeed;
 
+            // Animate wheel rotation (clockwise when moving right)
+            this.truck.wheelRotation += 0.15;
+
             // Update ladder and nozzle positions if they exist
             if (this.ladder && this.nozzle) {
                 this.setupTruckEquipment();
@@ -1302,6 +1349,9 @@ class FireRescueLevel {
                 this.truck.hoseCoil.x -= backupSpeed;
                 this.truck.port.x -= backupSpeed;
 
+                // Wheel rotation (counter-clockwise when backing up)
+                this.truck.wheelRotation -= 0.6;
+
                 // Also update ladder and nozzle positions
                 this.setupTruckEquipment();
 
@@ -1321,6 +1371,9 @@ class FireRescueLevel {
                 this.truck.x += rollInSpeed;
                 this.truck.hoseCoil.x += rollInSpeed;
                 this.truck.port.x += rollInSpeed;
+
+                // Wheel rotation (clockwise when moving forward)
+                this.truck.wheelRotation += 0.3;
 
                 // Update ladder and nozzle positions
                 this.setupTruckEquipment();
@@ -1422,6 +1475,75 @@ class FireRescueLevel {
                     vy: Math.sin(downwardBias) * speed,
                     life: 60 + Math.random() * 30, // Longer lasting
                     size: 1.5 + Math.random() * 2.5, // Slightly larger
+                    opacity: 0.5 + Math.random() * 0.3,
+                    type: 'heavy'
+                });
+            }
+        }
+
+        // Spawn water drops from truck2's cannon when it's extended and spraying
+        if (this.isSpraying && this.gameState === 'SPRAYING' && this.truck2.isActive && this.truck2.ladder.extensionComplete) {
+            const ladder = this.truck2.ladder;
+            const truck = this.truck2;
+
+            // Calculate cannon position (same as in updateNozzleAngle)
+            const anchorX = truck.x + truck.width - 20;
+            const anchorY = truck.y - 5;
+            const totalLength = ladder.baseLength + ladder.extensionLength;
+            const angleRad = (ladder.angle * Math.PI) / 180;
+            const cannonX = anchorX - Math.cos(angleRad) * totalLength;
+            const cannonY = anchorY - Math.sin(angleRad) * totalLength;
+
+            // Offset cannon tip slightly forward
+            const cannonTipX = cannonX + Math.cos(ladder.cannonAngle) * 26;
+            const cannonTipY = cannonY + Math.sin(ladder.cannonAngle) * 26;
+
+            // Main water stream from cannon
+            for (let i = 0; i < 2; i++) {
+                this.waterDrops.push({
+                    x: cannonTipX,
+                    y: cannonTipY,
+                    vx: Math.cos(ladder.cannonAngle) * (10 + Math.random() * 3),
+                    vy: Math.sin(ladder.cannonAngle) * (10 + Math.random() * 3),
+                    life: 80,
+                    size: 4 + Math.random() * 2,
+                    isMist: false
+                });
+                this.waterUsed++;
+
+                if (window.firefighterScoreboard) {
+                    window.firefighterScoreboard.recordWaterUsed(0.5);
+                }
+            }
+
+            // Regular mist particles from cannon
+            for (let i = 0; i < 4; i++) {
+                const spreadAngle = ladder.cannonAngle + (Math.random() - 0.5) * 0.8;
+                const speed = 4 + Math.random() * 4;
+                this.mistParticles.push({
+                    x: cannonTipX + Math.cos(ladder.cannonAngle) * 20,
+                    y: cannonTipY + Math.sin(ladder.cannonAngle) * 20,
+                    vx: Math.cos(spreadAngle) * speed,
+                    vy: Math.sin(spreadAngle) * speed,
+                    life: 40 + Math.random() * 20,
+                    size: 1 + Math.random() * 2,
+                    opacity: 0.4 + Math.random() * 0.4,
+                    type: 'light'
+                });
+            }
+
+            // Heavier mist from cannon
+            for (let i = 0; i < 8; i++) {
+                const downwardBias = ladder.cannonAngle + 0.3 + (Math.random() - 0.5) * 0.6;
+                const speed = 3 + Math.random() * 3;
+                const startDistance = 25 + Math.random() * 15;
+                this.mistParticles.push({
+                    x: cannonTipX + Math.cos(ladder.cannonAngle) * startDistance,
+                    y: cannonTipY + Math.sin(ladder.cannonAngle) * startDistance,
+                    vx: Math.cos(downwardBias) * speed,
+                    vy: Math.sin(downwardBias) * speed,
+                    life: 60 + Math.random() * 30,
+                    size: 1.5 + Math.random() * 2.5,
                     opacity: 0.5 + Math.random() * 0.3,
                     type: 'heavy'
                 });
@@ -1622,9 +1744,9 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
 
-        // Cab (at right edge)
+        // Cab (at right edge, aligned with truck body)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y, 40, 50);
 
         // Emergency lights on cab roof (smaller for classic truck)
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
@@ -1635,16 +1757,48 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 115, this.truck.y - 25, 2, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 135, this.truck.y - 25, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 115, this.truck.y - 3, 2, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 135, this.truck.y - 3, 2, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Wheels
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Wheels with rotation animation
+        const wheelPositions = [this.truck.x + 25, this.truck.x + 95];
+        const wheelRadius = 15;
+        const isMoving = !this.truckEntranceComplete || this.truckChanging;
+
+        wheelPositions.forEach(wheelX => {
+            // Tire
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.beginPath();
+            this.ctx.arc(wheelX, this.truck.y + this.truck.height + wheelRadius, wheelRadius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Animated spokes when moving
+            if (isMoving) {
+                this.ctx.save();
+                this.ctx.translate(wheelX, this.truck.y + this.truck.height + wheelRadius);
+                this.ctx.rotate(this.truck.wheelRotation || 0);
+
+                // Spokes
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    this.ctx.strokeStyle = '#95a5a6';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+            } else {
+                // Static rim when not moving
+                this.ctx.fillStyle = '#95a5a6';
+                this.ctx.beginPath();
+                this.ctx.arc(wheelX, this.truck.y + this.truck.height + wheelRadius, 10, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        });
 
         // Hose coil
         if (this.gameState === 'START') {
@@ -1674,13 +1828,13 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 40, 25, 25);
         this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 40, 25, 25);
 
-        // Cab with more detail (at right edge)
+        // Cab with more detail (at right edge, aligned with truck body)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.truck.x + 105, this.truck.y - 20, 40, 30);
+        this.ctx.fillRect(this.truck.x + 105, this.truck.y, 40, 50);
 
         // Cab windows
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(this.truck.x + 110, this.truck.y - 15, 30, 20);
+        this.ctx.fillRect(this.truck.x + 110, this.truck.y + 5, 30, 20);
 
         // Horizontal ladder on top
         const ladderY = this.truck.y - 8;
@@ -1699,7 +1853,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillRect(this.truck.x + 12, ladderY - 2, 6, 10);
         this.ctx.fillRect(this.truck.x + 92, ladderY - 2, 6, 10);
 
-        // Emergency lights on top (flash during truck change animation or continuously if enabled)
+        // Emergency lights on top of cab
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
                           (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
         if (shouldFlash) {
@@ -1708,23 +1862,48 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 30, this.truck.y - 12, 3, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 70, this.truck.y - 12, 3, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 115, this.truck.y - 3, 3, 0, Math.PI * 2);
+        this.ctx.arc(this.truck.x + 135, this.truck.y - 3, 3, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Wheels with more detail
-        this.ctx.fillStyle = '#2c3e50';
-        this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 15, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Wheels with rotation animation
+        const wheelPositions = [this.truck.x + 25, this.truck.x + 95];
+        const wheelRadius = 15;
+        const isMoving = !this.truckEntranceComplete || this.truckChanging;
 
-        // Wheel rims
-        this.ctx.fillStyle = '#95a5a6';
-        this.ctx.beginPath();
-        this.ctx.arc(this.truck.x + 25, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
-        this.ctx.arc(this.truck.x + 95, this.truck.y + this.truck.height + 15, 8, 0, Math.PI * 2);
-        this.ctx.fill();
+        wheelPositions.forEach(wheelX => {
+            // Tire
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.beginPath();
+            this.ctx.arc(wheelX, this.truck.y + this.truck.height + wheelRadius, wheelRadius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Animated spokes when moving
+            if (isMoving) {
+                this.ctx.save();
+                this.ctx.translate(wheelX, this.truck.y + this.truck.height + wheelRadius);
+                this.ctx.rotate(this.truck.wheelRotation || 0);
+
+                // Spokes
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    this.ctx.strokeStyle = '#95a5a6';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+            } else {
+                // Static rim when not moving
+                this.ctx.fillStyle = '#95a5a6';
+                this.ctx.beginPath();
+                this.ctx.arc(wheelX, this.truck.y + this.truck.height + wheelRadius, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        });
 
         // Bumper (at right edge)
         this.ctx.fillStyle = '#34495e';
@@ -1756,23 +1935,23 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
 
-        // Equipment compartment panels
+        // Equipment compartment panels (mirrored to right side)
         this.ctx.strokeStyle = '#c0392b';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(truck.x + 10, truck.y + 10, 28, 28);
-        this.ctx.strokeRect(truck.x + 43, truck.y + 10, 28, 28);
-        this.ctx.strokeRect(truck.x + 10, truck.y + 43, 28, 28);
-        this.ctx.strokeRect(truck.x + 43, truck.y + 43, 28, 28);
+        this.ctx.strokeRect(truck.x + truck.width - 38, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + truck.width - 71, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + truck.width - 38, truck.y + 43, 28, 28);
+        this.ctx.strokeRect(truck.x + truck.width - 71, truck.y + 43, 28, 28);
 
-        // Cab with more detail (at right edge)
+        // Cab with more detail (at left edge, aligned with truck body)
         this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(truck.x + 115, truck.y - 22, 45, 32);
+        this.ctx.fillRect(truck.x, truck.y, 45, 50);
 
-        // Cab windows
+        // Cab windows (aligned with truck body corner)
         this.ctx.fillStyle = '#3498db';
-        this.ctx.fillRect(truck.x + 120, truck.y - 17, 35, 22);
+        this.ctx.fillRect(truck.x + 5, truck.y + 5, 35, 22);
 
-        // Emergency lights on top (flash during arrival or when ladder is active)
+        // Emergency lights on top of cab
         const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
                           (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
         if (shouldFlash) {
@@ -1781,16 +1960,16 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fillStyle = '#e74c3c'; // Normal red
         }
         this.ctx.beginPath();
-        this.ctx.arc(truck.x + 130, truck.y - 25, 3, 0, Math.PI * 2);
-        this.ctx.arc(truck.x + 145, truck.y - 25, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 15, truck.y - 3, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + 30, truck.y - 3, 3, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Wheels with rotation animation
         this.drawTruck2Wheels(truck);
 
-        // Bumper (at right edge)
+        // Bumper (at left edge)
         this.ctx.fillStyle = '#34495e';
-        this.ctx.fillRect(truck.x + 110, truck.y + truck.height - 5, 50, 8);
+        this.ctx.fillRect(truck.x, truck.y + truck.height - 5, 50, 8);
 
         // Draw the extending ladder
         this.drawTruck2Ladder(truck);
@@ -1799,8 +1978,8 @@ ${this.firesExtinguished === this.totalFires ?
     drawTruck2Wheels(truck) {
         const wheelRadius = 18;
         const wheelPositions = [
-            truck.x + 30,   // Front wheel
-            truck.x + 110   // Rear wheel
+            truck.x + 50,   // Rear wheel (now on left)
+            truck.x + 130   // Front wheel (now on right)
         ];
 
         wheelPositions.forEach(wheelX => {
@@ -1841,8 +2020,8 @@ ${this.firesExtinguished === this.totalFires ?
     drawTruck2Ladder(truck) {
         const ladder = truck.ladder;
 
-        // Ladder anchored to left side of truck (raises on the left)
-        const anchorX = truck.x + 20;
+        // Ladder anchored to right side of truck
+        const anchorX = truck.x + truck.width - 20;
         const anchorY = truck.y - 5;
 
         // Calculate current total length
@@ -1851,7 +2030,7 @@ ${this.firesExtinguished === this.totalFires ?
         // Convert angle to radians
         const angleRad = (ladder.angle * Math.PI) / 180;
 
-        // Calculate end point (extends to the LEFT to face truck1)
+        // Calculate end point (extends to the LEFT from the base)
         const endX = anchorX - Math.cos(angleRad) * totalLength;
         const endY = anchorY - Math.sin(angleRad) * totalLength;
 
@@ -1927,15 +2106,15 @@ ${this.firesExtinguished === this.totalFires ?
 
         // Draw water cannon at ladder tip (if ladder is extended)
         if (ladder.extensionComplete) {
-            this.drawWaterCannon(endX, endY, angleRad);
+            this.drawWaterCannon(endX, endY, ladder.cannonAngle);
         }
     }
 
     drawWaterCannon(x, y, angle) {
         this.ctx.save();
         this.ctx.translate(x, y);
-        // Rotate to face left (opposite direction)
-        this.ctx.rotate(Math.PI - angle);
+        // Rotate to the angle pointing toward mouse
+        this.ctx.rotate(angle);
 
         // Cannon body
         this.ctx.fillStyle = '#34495e';
@@ -2079,58 +2258,34 @@ ${this.firesExtinguished === this.totalFires ?
     }
 
     drawClassicHydrant() {
-        // Main body
-        this.ctx.fillStyle = '#e74c3c';
-        this.ctx.fillRect(this.hydrant.x, this.hydrant.y, this.hydrant.width, this.hydrant.height);
-
-        // Top cap
-        this.ctx.fillStyle = '#c0392b';
-        this.ctx.beginPath();
-        this.ctx.arc(this.hydrant.x + this.hydrant.width/2, this.hydrant.y, 25, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Port
-        this.ctx.fillStyle = '#34495e';
-        this.ctx.beginPath();
-        this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Valve
-        this.ctx.fillStyle = '#c0392b';
-        this.ctx.fillRect(this.hydrant.valve.x, this.hydrant.valve.y, this.hydrant.valve.width, this.hydrant.valve.height);
-    }
-
-    drawModernHydrant() {
         const centerX = this.hydrant.x + this.hydrant.width / 2;
 
-        // Base plate
-        this.ctx.fillStyle = '#7f8c8d';
-        this.ctx.fillRect(this.hydrant.x - 5, this.hydrant.y + this.hydrant.height, this.hydrant.width + 10, 8);
+        // Base flange
+        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillRect(this.hydrant.x - 3, this.hydrant.y + this.hydrant.height - 5, this.hydrant.width + 6, 8);
 
-        // Main body - tapered cylinder
-        this.ctx.fillStyle = '#f39c12'; // Yellow/gold color for modern hydrant
+        // Main body (tapered slightly)
+        this.ctx.fillStyle = '#e74c3c';
         this.ctx.beginPath();
-        this.ctx.moveTo(this.hydrant.x + 2, this.hydrant.y + this.hydrant.height);
-        this.ctx.lineTo(this.hydrant.x + 5, this.hydrant.y + 15);
-        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 5, this.hydrant.y + 15);
-        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 2, this.hydrant.y + this.hydrant.height);
+        this.ctx.moveTo(this.hydrant.x + 2, this.hydrant.y + this.hydrant.height - 5);
+        this.ctx.lineTo(this.hydrant.x + 4, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 4, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 2, this.hydrant.y + this.hydrant.height - 5);
         this.ctx.closePath();
         this.ctx.fill();
 
-        // Top section - wider
-        this.ctx.fillStyle = '#e67e22'; // Darker orange
-        this.ctx.fillRect(this.hydrant.x - 2, this.hydrant.y, this.hydrant.width + 4, 20);
+        // Upper section (bonnet)
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillRect(this.hydrant.x - 2, this.hydrant.y + 5, this.hydrant.width + 4, 15);
 
-        // Top cap - dome shape
-        this.ctx.fillStyle = '#d35400';
+        // Top cap (rounded dome)
+        this.ctx.fillStyle = '#c0392b';
         this.ctx.beginPath();
-        this.ctx.ellipse(centerX, this.hydrant.y, this.hydrant.width/2 + 2, 8, 0, Math.PI, 0, true);
+        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width/2 + 2, 0, Math.PI, true);
         this.ctx.fill();
 
-        // Side ports (2 on each side)
-        this.ctx.fillStyle = '#34495e';
-
         // Left port
+        this.ctx.fillStyle = '#34495e';
         this.ctx.beginPath();
         this.ctx.arc(this.hydrant.x - 5, this.hydrant.y + 30, 8, 0, Math.PI * 2);
         this.ctx.fill();
@@ -2140,24 +2295,98 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Port threads (detail)
+        // Port caps/threads
         this.ctx.strokeStyle = '#2c3e50';
         this.ctx.lineWidth = 1;
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
             this.ctx.beginPath();
             this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius - 2 - (i * 2), 0, Math.PI * 2);
             this.ctx.stroke();
         }
 
-        // Valve - pentagon nut shape on top
-        this.ctx.fillStyle = '#e67e22';
+        // Operating nut on top (pentagonal - for wrench)
+        this.ctx.fillStyle = '#c0392b';
         this.ctx.save();
-        this.ctx.translate(this.hydrant.valve.x + this.hydrant.valve.width/2, this.hydrant.valve.y + this.hydrant.valve.height/2);
+        this.ctx.translate(centerX, this.hydrant.y - 2);
         this.ctx.beginPath();
         for (let i = 0; i < 5; i++) {
             const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
-            const x = Math.cos(angle) * 12;
-            const y = Math.sin(angle) * 12;
+            const x = Math.cos(angle) * 10;
+            const y = Math.sin(angle) * 10;
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#a93226';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        this.ctx.restore();
+
+        // Operating stem
+        this.ctx.fillStyle = '#7f8c8d';
+        this.ctx.fillRect(centerX - 2, this.hydrant.y - 8, 4, 6);
+    }
+
+    drawModernHydrant() {
+        const centerX = this.hydrant.x + this.hydrant.width / 2;
+
+        // Base flange
+        this.ctx.fillStyle = '#d35400';
+        this.ctx.fillRect(this.hydrant.x - 3, this.hydrant.y + this.hydrant.height - 5, this.hydrant.width + 6, 8);
+
+        // Main body - tapered cylinder
+        this.ctx.fillStyle = '#f39c12'; // Yellow/gold color for modern hydrant
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.hydrant.x + 2, this.hydrant.y + this.hydrant.height - 5);
+        this.ctx.lineTo(this.hydrant.x + 4, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 4, this.hydrant.y + 15);
+        this.ctx.lineTo(this.hydrant.x + this.hydrant.width - 2, this.hydrant.y + this.hydrant.height - 5);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Upper section (bonnet)
+        this.ctx.fillStyle = '#f39c12';
+        this.ctx.fillRect(this.hydrant.x - 2, this.hydrant.y + 5, this.hydrant.width + 4, 15);
+
+        // Top cap (rounded dome)
+        this.ctx.fillStyle = '#e67e22';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width/2 + 2, 0, Math.PI, true);
+        this.ctx.fill();
+
+        // Left port
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.beginPath();
+        this.ctx.arc(this.hydrant.x - 5, this.hydrant.y + 30, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Right port (the interactive one)
+        this.ctx.beginPath();
+        this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Port caps/threads
+        this.ctx.strokeStyle = '#2c3e50';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 2; i++) {
+            this.ctx.beginPath();
+            this.ctx.arc(this.hydrant.port.x, this.hydrant.port.y, this.hydrant.port.radius - 2 - (i * 2), 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+
+        // Operating nut on top (pentagonal - for wrench)
+        this.ctx.fillStyle = '#e67e22';
+        this.ctx.save();
+        this.ctx.translate(centerX, this.hydrant.y - 2);
+        this.ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const x = Math.cos(angle) * 10;
+            const y = Math.sin(angle) * 10;
             if (i === 0) {
                 this.ctx.moveTo(x, y);
             } else {
@@ -2171,10 +2400,14 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.stroke();
         this.ctx.restore();
 
+        // Operating stem
+        this.ctx.fillStyle = '#7f8c8d';
+        this.ctx.fillRect(centerX - 2, this.hydrant.y - 8, 4, 6);
+
         // Reflective strips for visibility
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(this.hydrant.x + 8, this.hydrant.y + 25, 4, 10);
-        this.ctx.fillRect(this.hydrant.x + this.hydrant.width - 12, this.hydrant.y + 25, 4, 10);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.fillRect(this.hydrant.x + 8, this.hydrant.y + 25, 4, 12);
+        this.ctx.fillRect(this.hydrant.x + this.hydrant.width - 12, this.hydrant.y + 25, 4, 12);
     }
     
     drawLadder() {
