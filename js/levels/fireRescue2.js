@@ -5,7 +5,7 @@ class FireRescueLevel {
         this.canvas = document.getElementById('fireGameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.instructionText = document.getElementById('fire-game-instructions');
-        
+
         this.gameState = 'START';
         this.mouse = { x: 0, y: 0 };
         this.isSpraying = false;
@@ -38,7 +38,7 @@ class FireRescueLevel {
         this.timerDuration = 0; // in milliseconds
         this.timerStartTime = null;
         this.timerEnded = false;
-        
+
         // Developer mode properties
         this.developerMode = localStorage.getItem('firefighterDebugMode') === 'true';
         this.showTruckMeasurements = false;
@@ -63,23 +63,10 @@ class FireRescueLevel {
         // Callbacks for syncing with options menu
         this.onDebugModeChange = null;
         this.onTruckStyleChange = null;
-        
+
         // Audio - much gentler sounds
-        this.actionSynth = new Tone.Synth({
-            oscillator: { type: 'sine' },
-            envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.3 }
-        }).toDestination();
-        this.actionSynth.volume.value = -12; // Quieter
+        this.initAudio();
 
-        this.waterSynth = this.createWaterSynth();
-        this.waterSynth.volume.value = -8; // Gentler water sound
-
-        this.hornSynth = new Tone.Synth({
-            oscillator: { type: 'triangle' }, // Gentler than sawtooth
-            envelope: { attack: 0.1, decay: 0.4, sustain: 0.2, release: 0.8 }
-        }).toDestination();
-        this.hornSynth.volume.value = -10; // Quieter horn
-        
         // Game objects with positions (truck starts off-screen, extended by ~1 inch)
         this.truck = {
             x: this.truckStartX, y: 400, width: 145, height: 80,
@@ -136,19 +123,60 @@ class FireRescueLevel {
             port: { x: 350, y: 450, radius: 12 },
             valve: { x: 370, y: 410, width: 20, height: 20 } // Pentagon nut on top
         };
-        
+
         this.nozzle = { x: 200, y: 300, angle: 0, attachedToTruck: false };
         this.ladder = { x: 0, y: 0, width: 60, height: 8, visible: true };
-        
+
         this.buildings = this.createBuildings();
         this.initializeWindows();
         this.spawnInitialFires();
-        
+
         // Set up ladder and nozzle positions on truck from the start
         this.setupTruckEquipment();
-        
+
         this.init();
         this.setupSoundControls();
+    }
+
+    initAudio() {
+        try {
+            if (typeof Tone !== 'undefined') {
+                this.actionSynth = new Tone.Synth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.3 }
+                }).toDestination();
+                this.actionSynth.volume.value = -12; // Quieter
+
+                this.waterSynth = this.createWaterSynth();
+                if (this.waterSynth && this.waterSynth.volume) {
+                    this.waterSynth.volume.value = -8; // Gentler water sound
+                }
+
+                this.hornSynth = new Tone.Synth({
+                    oscillator: { type: 'triangle' }, // Gentler than sawtooth
+                    envelope: { attack: 0.1, decay: 0.4, sustain: 0.2, release: 0.8 }
+                }).toDestination();
+                this.hornSynth.volume.value = -10; // Quieter horn
+            } else {
+                throw new Error('Tone not defined');
+            }
+        } catch (e) {
+            console.warn('Audio initialization failed, using dummy synths:', e);
+            this.actionSynth = this.createDummySynth();
+            this.waterSynth = this.createDummySynth();
+            this.hornSynth = this.createDummySynth();
+        }
+    }
+
+    createDummySynth() {
+        return {
+            triggerAttackRelease: () => { },
+            triggerAttack: () => { },
+            triggerRelease: () => { },
+            volume: { value: 0 },
+            dispose: () => { },
+            toDestination: () => { return this; }
+        };
     }
 
     createWaterSynth() {
@@ -197,25 +225,32 @@ class FireRescueLevel {
                 if (this.waterSynth && this.waterSynth.dispose) {
                     this.waterSynth.dispose();
                 }
-                this.waterSynth = this.createWaterSynth();
-                this.waterSynth.volume.value = -8;
+                try {
+                    this.waterSynth = this.createWaterSynth();
+                    if (this.waterSynth && this.waterSynth.volume) {
+                        this.waterSynth.volume.value = -8;
+                    }
+                } catch (e) {
+                    console.warn('Failed to recreate water synth:', e);
+                    this.waterSynth = this.createDummySynth();
+                }
             });
         }
     }
-    
+
     setupScreen() {
         this.gameScreen = document.getElementById('fire-game-screen');
     }
-    
+
     setupTruckEquipment() {
         // Position ladder platform on top of truck from the start
         this.ladder.x = this.truck.x + 20;
         this.ladder.y = this.truck.y - 5;
         // Position nozzle on the ladder
-        this.nozzle.x = this.ladder.x + this.ladder.width/2;
+        this.nozzle.x = this.ladder.x + this.ladder.width / 2;
         this.nozzle.y = this.ladder.y - 8;
     }
-    
+
     init() {
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -223,7 +258,7 @@ class FireRescueLevel {
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         window.addEventListener('mouseup', () => this.handleMouseUp());
-        
+
         // Developer mode keyboard shortcut (Ctrl+Shift+D)
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
@@ -231,22 +266,22 @@ class FireRescueLevel {
                 this.toggleDeveloperMode();
             }
         });
-        
+
         // Add Return to Station button functionality
         const returnButton = document.getElementById('return-station-button');
         if (returnButton) {
             returnButton.addEventListener('click', () => this.returnToStation());
         }
-        
+
         // Add timer settings event listeners
         this.setupTimerControls();
-        
+
         // Add developer mode event listeners
         this.setupDeveloperControls();
-        
+
         this.gameLoop();
     }
-    
+
     setupTimerControls() {
         const timer1MinButton = document.getElementById('timer-1min-btn');
         const timer5MinButton = document.getElementById('timer-5min-btn');
@@ -262,7 +297,7 @@ class FireRescueLevel {
             endNowButton.addEventListener('click', () => this.endGameNow());
         }
     }
-    
+
     setTimerMode(mode) {
         this.timerMode = mode;
         const statusBar = document.getElementById('fire-game-status');
@@ -302,14 +337,14 @@ class FireRescueLevel {
         // Start the actual gameplay
         this.startGameplay();
     }
-    
+
     setupDeveloperControls() {
         const devToggleTruck = document.getElementById('dev-toggle-truck');
         const devToggleHydrant = document.getElementById('dev-toggle-hydrant');
         const devToggleBuildings = document.getElementById('dev-toggle-buildings');
         const devToggleCoords = document.getElementById('dev-toggle-coords');
         const devModeOff = document.getElementById('dev-mode-off');
-        
+
         if (devToggleTruck) {
             devToggleTruck.addEventListener('click', () => this.toggleTruckMeasurements());
         }
@@ -326,7 +361,7 @@ class FireRescueLevel {
             devModeOff.addEventListener('click', () => this.toggleDeveloperMode());
         }
     }
-    
+
     toggleDeveloperMode() {
         this.developerMode = !this.developerMode;
         const devControls = document.getElementById('fire-developer-controls');
@@ -687,9 +722,9 @@ class FireRescueLevel {
         // Check if new fire location is on a building
         const isOnBuilding = this.buildings.some(building => {
             return newX >= building.x &&
-                   newX <= building.x + building.width &&
-                   newY >= building.y &&
-                   newY <= building.y + building.height;
+                newX <= building.x + building.width &&
+                newY >= building.y &&
+                newY <= building.y + building.height;
         });
 
         if (!isOnBuilding) {
@@ -723,27 +758,27 @@ class FireRescueLevel {
         // Update the source fire's spread timer
         sourceFire.lastSpreadTime = Date.now();
     }
-    
+
     toggleTruckMeasurements() {
         this.showTruckMeasurements = !this.showTruckMeasurements;
         this.updateDeveloperButtons();
     }
-    
+
     toggleHydrantMeasurements() {
         this.showHydrantMeasurements = !this.showHydrantMeasurements;
         this.updateDeveloperButtons();
     }
-    
+
     toggleBuildingMeasurements() {
         this.showBuildingMeasurements = !this.showBuildingMeasurements;
         this.updateDeveloperButtons();
     }
-    
+
     toggleCoordinates() {
         this.showCoordinates = !this.showCoordinates;
         this.updateDeveloperButtons();
     }
-    
+
     updateDeveloperButtons() {
         const buttons = [
             { id: 'dev-toggle-truck', active: this.showTruckMeasurements },
@@ -767,11 +802,11 @@ class FireRescueLevel {
         setTimeout(() => this.hornSynth.triggerAttackRelease('Bb3', '4n'), 500);
         setTimeout(() => this.hornSynth.triggerAttackRelease('F3', '2n'), 700);
     }
-    
+
     updateTimerDisplay() {
         const timerText = document.getElementById('fire-timer-text');
         if (!timerText) return;
-        
+
         if (this.timerMode === 'manual') {
             const elapsed = Math.floor((Date.now() - this.timerStartTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
@@ -782,14 +817,14 @@ class FireRescueLevel {
             const minutes = Math.floor(remaining / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
             timerText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
+
             // Check if time is up
             if (remaining <= 0 && !this.timerEnded) {
                 this.endGameNow();
             }
         }
     }
-    
+
     endGameNow() {
         this.timerEnded = true;
         setTimeout(() => {
@@ -803,14 +838,14 @@ class FireRescueLevel {
             }
         }, 500);
     }
-    
+
     start() {
         // Reset timer properties
         this.timerMode = 'manual';
         this.timerDuration = 0;
         this.timerStartTime = null;
         this.timerEnded = false;
-        
+
         this.gameScreen.classList.remove('hidden');
 
         // Play fire truck horn sound and animation
@@ -826,15 +861,15 @@ class FireRescueLevel {
         if (devControls) {
             devControls.style.display = this.developerMode ? 'block' : 'none';
         }
-        
+
         this.resizeCanvas();
         // Double-check sizing after a moment
         setTimeout(() => this.resizeCanvas(), 50);
-        
+
         // Set initial instructions
         this.instructionText.textContent = 'Click the hose on the truck!';
     }
-    
+
     startGameplay() {
         // Reset game state
         this.gameState = 'START';
@@ -858,25 +893,25 @@ class FireRescueLevel {
         this.nozzle.x = 200;
         this.nozzle.y = 300;
         this.nozzle.angle = 0;
-        
+
         // Start scoreboard tracking
         if (window.firefighterScoreboard) {
             window.firefighterScoreboard.startSession();
         }
-        
+
         // Store reference for scoreboard access
         window.currentFireRescueGame = this;
-        
+
         // Reset instructions
         this.instructionText.textContent = 'Fire truck arriving on scene!';
-        
+
         // Respawn initial fires
         this.spawnInitialFires();
-        
+
         // Set up truck equipment
         this.setupTruckEquipment();
     }
-    
+
     resizeCanvas() {
         if (this.gameScreen.classList.contains('hidden')) return;
 
@@ -938,7 +973,7 @@ class FireRescueLevel {
             this.initializeWindows();
         }
     }
-    
+
     createBuildings() {
         const buildings = [];
         const canvasWidth = this.canvas ? this.canvas.width : 800;
@@ -977,7 +1012,7 @@ class FireRescueLevel {
 
         return buildings;
     }
-    
+
     initializeWindows() {
         // Preserve existing window lighting states if windows already exist
         const existingWindows = this.windows ? [...this.windows] : [];
@@ -1015,7 +1050,7 @@ class FireRescueLevel {
             }
         });
     }
-    
+
     spawnInitialFires() {
         // Don't spawn fires during grace period
         return;
@@ -1046,7 +1081,7 @@ class FireRescueLevel {
             console.log(`Spawned fire at (${fire.x}, ${fire.y}) on building at (${building.x}, ${building.y})`);
         }
     }
-    
+
     spawnNewFire() {
         if (this.buildings.length === 0) return;
 
@@ -1074,9 +1109,9 @@ class FireRescueLevel {
         // Check if puddle is on a building surface
         const isOnBuilding = this.buildings.some(building => {
             return x >= building.x &&
-                   x <= building.x + building.width &&
-                   y >= building.y &&
-                   y <= building.y + building.height;
+                x <= building.x + building.width &&
+                y >= building.y &&
+                y <= building.y + building.height;
         });
 
         // Only create puddle if it's on ground or on a building
@@ -1194,7 +1229,7 @@ class FireRescueLevel {
                 break;
         }
     }
-    
+
     handleMouseMove(e) {
         // Don't handle mouse moves during truck changing
         if (this.truckChanging) return;
@@ -1215,7 +1250,7 @@ class FireRescueLevel {
             this.updateNozzleAngle();
         }
     }
-    
+
     handleMouseDown(e) {
         // Don't handle mouse down during truck changing
         if (this.truckChanging) return;
@@ -1243,7 +1278,7 @@ class FireRescueLevel {
             }
         }
     }
-    
+
     updateNozzleAngle() {
         const dx = this.mouse.x - this.nozzle.x;
         const dy = this.mouse.y - this.nozzle.y;
@@ -1268,17 +1303,17 @@ class FireRescueLevel {
             ladder.cannonAngle = Math.atan2(cdy, cdx);
         }
     }
-    
+
     isInCircle(pos, circle) {
         const dist = Math.hypot(pos.x - circle.x, pos.y - circle.y);
         return dist < circle.radius;
     }
-    
+
     isInRect(pos, rect) {
         return pos.x >= rect.x && pos.x <= rect.x + rect.width &&
-               pos.y >= rect.y && pos.y <= rect.y + rect.height;
+            pos.y >= rect.y && pos.y <= rect.y + rect.height;
     }
-    
+
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
         return {
@@ -1286,7 +1321,7 @@ class FireRescueLevel {
             y: (e.clientY - rect.top) * (this.canvas.height / rect.height)
         };
     }
-    
+
     updateWindows() {
         const now = Date.now();
         this.windows.forEach(window => {
@@ -1304,13 +1339,13 @@ class FireRescueLevel {
             }
         });
     }
-    
+
     update() {
         // Update timer display if timer is active
         if (this.timerStartTime && !this.timerEnded) {
             this.updateTimerDisplay();
         }
-        
+
         // Update window lighting gradually
         this.updateWindows();
 
@@ -1424,7 +1459,7 @@ class FireRescueLevel {
         if (this.fireSpread && timeSinceStart >= this.gracePeriodDuration && Math.random() < 0.008) {
             this.spreadFires();
         }
-        
+
         // Spawn water drops when spraying
         if (this.isSpraying && this.gameState === 'SPRAYING') {
             // Main water stream - fewer but more powerful drops
@@ -1549,7 +1584,7 @@ class FireRescueLevel {
                 });
             }
         }
-        
+
         // Update water drops with enhanced gravity
         this.waterDrops.forEach((drop, index) => {
             drop.x += drop.vx;
@@ -1625,7 +1660,7 @@ class FireRescueLevel {
                     fire.isGrowing = false;
                 }
             }
-            
+
             // Check water collision with main drops
             this.waterDrops.forEach((drop, dropIndex) => {
                 const dist = Math.hypot(drop.x - fire.x, drop.y - fire.y);
@@ -1643,19 +1678,19 @@ class FireRescueLevel {
                     this.mistParticles.splice(mistIndex, 1);
                 }
             });
-            
+
             if (fire.life <= 0) {
                 this.fires.splice(fireIndex, 1);
                 this.firesExtinguished++;
                 this.actionSynth.triggerAttackRelease('A5', '4n');
-                
+
                 // Track fire extinguished for scoreboard
                 if (window.firefighterScoreboard) {
                     window.firefighterScoreboard.recordFireExtinguished();
                 }
             }
         });
-        
+
         // Check win condition - but don't auto-end in manual mode unless explicitly ended
         if (this.fires.length === 0 && this.firesExtinguished > 0 && this.timerMode !== 'manual') {
             setTimeout(() => {
@@ -1666,11 +1701,11 @@ class FireRescueLevel {
             this.spawnNewFire();
         }
     }
-    
+
     returnToStation() {
         const gameTime = Math.round((Date.now() - this.gameStartTime) / 1000);
         const waterEfficiency = this.firesExtinguished > 0 ? Math.round(this.waterUsed / this.firesExtinguished) : 0;
-        
+
         const report = `🚒 FIRE RESCUE REPORT 🚒
 
 🔥 Fires Encountered: ${this.totalFires}
@@ -1680,24 +1715,24 @@ class FireRescueLevel {
 ⏱️ Time on Scene: ${gameTime} seconds
 📊 Water per Fire: ${waterEfficiency} drops
 
-${this.firesExtinguished === this.totalFires ? 
-  '⭐ EXCELLENT WORK! All fires extinguished!' : 
-  this.firesExtinguished > 0 ? 
-    '✅ Good job firefighter! Some fires contained.' : 
-    '⚠️ No fires extinguished. More training needed.'}`;
+${this.firesExtinguished === this.totalFires ?
+                '⭐ EXCELLENT WORK! All fires extinguished!' :
+                this.firesExtinguished > 0 ?
+                    '✅ Good job firefighter! Some fires contained.' :
+                    '⚠️ No fires extinguished. More training needed.'}`;
 
         showHeroReport(report);
     }
-    
+
     draw() {
         // Clear canvas with more distinct sky blue
         this.ctx.fillStyle = '#5dade2';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Draw ground
         this.ctx.fillStyle = '#7f8c8d';
         this.ctx.fillRect(0, this.canvas.height - 100, this.canvas.width, 100);
-        
+
         this.drawBuildings();
         this.drawPuddles();
         this.drawTruck();
@@ -1716,21 +1751,21 @@ ${this.firesExtinguished === this.totalFires ?
             this.drawDeveloperOverlays();
         }
     }
-    
+
     drawBuildings() {
         // Draw building structures
         this.buildings.forEach(building => {
             this.ctx.fillStyle = '#bdc3c7';
             this.ctx.fillRect(building.x, building.y, building.width, building.height);
         });
-        
+
         // Draw windows with gradual lighting changes
         this.windows.forEach(window => {
             this.ctx.fillStyle = window.isLit ? '#f1c40f' : '#34495e';
             this.ctx.fillRect(window.x, window.y, window.width, window.height);
         });
     }
-    
+
     drawTruck() {
         if (this.truckStyle === 'detailed') {
             this.drawDetailedTruck();
@@ -1750,7 +1785,7 @@ ${this.firesExtinguished === this.totalFires ?
 
         // Emergency lights on cab roof (smaller for classic truck)
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
-                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+            (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
         if (shouldFlash) {
             this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
         } else {
@@ -1855,7 +1890,7 @@ ${this.firesExtinguished === this.totalFires ?
 
         // Emergency lights on top of cab
         const shouldFlash = (this.emergencyLightsFlashing && Math.floor(this.lightFlashTimer / 8) % 2 === 0) ||
-                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+            (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
         if (shouldFlash) {
             this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
         } else {
@@ -1953,7 +1988,7 @@ ${this.firesExtinguished === this.totalFires ?
 
         // Emergency lights on top of cab
         const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
-                          (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+            (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
         if (shouldFlash) {
             this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
         } else {
@@ -2281,7 +2316,7 @@ ${this.firesExtinguished === this.totalFires ?
         // Top cap (rounded dome)
         this.ctx.fillStyle = '#c0392b';
         this.ctx.beginPath();
-        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width/2 + 2, 0, Math.PI, true);
+        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width / 2 + 2, 0, Math.PI, true);
         this.ctx.fill();
 
         // Left port
@@ -2355,7 +2390,7 @@ ${this.firesExtinguished === this.totalFires ?
         // Top cap (rounded dome)
         this.ctx.fillStyle = '#e67e22';
         this.ctx.beginPath();
-        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width/2 + 2, 0, Math.PI, true);
+        this.ctx.arc(centerX, this.hydrant.y + 5, this.hydrant.width / 2 + 2, 0, Math.PI, true);
         this.ctx.fill();
 
         // Left port
@@ -2409,26 +2444,26 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillRect(this.hydrant.x + 8, this.hydrant.y + 25, 4, 12);
         this.ctx.fillRect(this.hydrant.x + this.hydrant.width - 12, this.hydrant.y + 25, 4, 12);
     }
-    
+
     drawLadder() {
         if (this.ladder.visible) {
             // Draw white ladder platform
             this.ctx.fillStyle = '#ecf0f1';
             this.ctx.fillRect(this.ladder.x, this.ladder.y, this.ladder.width, this.ladder.height);
-            
+
             // Draw ladder rungs
             this.ctx.fillStyle = '#bdc3c7';
             for (let i = 8; i < this.ladder.width - 8; i += 12) {
                 this.ctx.fillRect(this.ladder.x + i, this.ladder.y, 2, this.ladder.height);
             }
-            
+
             // Draw support posts
             this.ctx.fillStyle = '#95a5a6';
             this.ctx.fillRect(this.ladder.x, this.ladder.y, 3, this.ladder.height);
             this.ctx.fillRect(this.ladder.x + this.ladder.width - 3, this.ladder.y, 3, this.ladder.height);
         }
     }
-    
+
     drawHose() {
         if (this.gameState === 'TRUCK_CONNECTED') {
             // Hose to mouse
@@ -2456,7 +2491,7 @@ ${this.firesExtinguished === this.totalFires ?
                 this.hydrant.port.y
             );
             this.ctx.stroke();
-            
+
             // Extended hose to nozzle
             if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
                 this.ctx.beginPath();
@@ -2471,16 +2506,16 @@ ${this.firesExtinguished === this.totalFires ?
             }
         }
     }
-    
+
     drawNozzle() {
         if (this.ladder.visible) {
             this.ctx.save();
             this.ctx.translate(this.nozzle.x, this.nozzle.y);
             this.ctx.rotate(this.nozzle.angle);
-            
+
             this.ctx.fillStyle = '#95a5a6';
             this.ctx.fillRect(0, -8, 40, 16);
-            
+
             this.ctx.restore();
         }
     }
@@ -2495,9 +2530,9 @@ ${this.firesExtinguished === this.totalFires ?
                 // Find which building (if any) this puddle is on
                 const onBuilding = this.buildings.find(building => {
                     return puddle.x >= building.x &&
-                           puddle.x <= building.x + building.width &&
-                           puddle.y >= building.y &&
-                           puddle.y <= building.y + building.height;
+                        puddle.x <= building.x + building.width &&
+                        puddle.y >= building.y &&
+                        puddle.y <= building.y + building.height;
                 });
 
                 // Only draw if puddle is on a valid surface
@@ -2567,7 +2602,7 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.fill();
         });
     }
-    
+
     drawFires() {
         this.fires.forEach(fire => {
             // Skip rendering fires that are too small to see
@@ -2578,7 +2613,7 @@ ${this.firesExtinguished === this.totalFires ?
 
             const opacity = fire.life / 100;
             const flicker = Math.sin(fire.flicker) * 5;
-            
+
             // Outer flame
             this.ctx.fillStyle = `rgba(255, 165, 0, ${0.8 * opacity})`;
             this.ctx.beginPath();
@@ -2586,7 +2621,7 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.quadraticCurveTo(fire.size + flicker, -fire.size, 0, -fire.size * 2);
             this.ctx.quadraticCurveTo(-fire.size - flicker, -fire.size, 0, 0);
             this.ctx.fill();
-            
+
             // Inner flame
             this.ctx.fillStyle = `rgba(255, 255, 0, ${0.9 * opacity})`;
             this.ctx.beginPath();
@@ -2594,16 +2629,16 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.quadraticCurveTo(fire.size * 0.6, -fire.size * 0.7, 0, -fire.size * 1.4);
             this.ctx.quadraticCurveTo(-fire.size * 0.6, -fire.size * 0.7, 0, 0);
             this.ctx.fill();
-            
+
             this.ctx.restore();
         });
     }
-    
+
     drawHighlights() {
         const pulse = Math.abs(Math.sin(Date.now() * 0.005)) * 5;
         this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
         this.ctx.lineWidth = 3;
-        
+
         if (this.gameState === 'START') {
             this.ctx.beginPath();
             this.ctx.arc(this.truck.hoseCoil.x, this.truck.hoseCoil.y, this.truck.hoseCoil.radius + pulse, 0, Math.PI * 2);
@@ -2618,126 +2653,126 @@ ${this.firesExtinguished === this.totalFires ?
             this.ctx.stroke();
         } else if (this.gameState === 'HYDRANT_CONNECTED') {
             this.ctx.strokeRect(
-                this.hydrant.valve.x - pulse/2, 
-                this.hydrant.valve.y - pulse/2, 
-                this.hydrant.valve.width + pulse, 
+                this.hydrant.valve.x - pulse / 2,
+                this.hydrant.valve.y - pulse / 2,
+                this.hydrant.valve.width + pulse,
                 this.hydrant.valve.height + pulse
             );
         }
     }
-    
+
     gameLoop() {
         this.update();
         this.draw();
         window.fireGameAnimationId = requestAnimationFrame(() => this.gameLoop());
     }
-    
+
     drawDeveloperOverlays() {
         this.ctx.save();
         this.ctx.font = '12px Arial';
         this.ctx.strokeStyle = '#ff0000';
         this.ctx.lineWidth = 2;
-        
+
         if (this.showTruckMeasurements) {
             this.drawTruckMeasurements();
         }
-        
+
         if (this.showHydrantMeasurements) {
             this.drawHydrantMeasurements();
         }
-        
+
         if (this.showBuildingMeasurements) {
             this.drawBuildingMeasurements();
         }
-        
+
         if (this.showCoordinates) {
             this.drawCoordinates();
         }
-        
+
         this.ctx.restore();
     }
-    
+
     drawTruckMeasurements() {
         const truck = this.truck;
         const ladder = this.ladder;
         const nozzle = this.nozzle;
-        
+
         // Main body measurements
         this.drawMeasurement(truck.x, truck.y - 15, truck.x + truck.width, truck.y - 15, `${truck.width}px`, 'top');
         this.drawMeasurement(truck.x - 15, truck.y, truck.x - 15, truck.y + truck.height, `${truck.height}px`, 'left');
-        
+
         // Cab measurements
         this.drawMeasurement(truck.x + 80, truck.y - 35, truck.x + 120, truck.y - 35, '40px', 'top');
         this.drawMeasurement(truck.x + 125, truck.y - 20, truck.x + 125, truck.y + 10, '30px', 'right');
-        
+
         // Wheel measurements
         this.drawRadialMeasurement(truck.x + 25, truck.y + truck.height + 15, 15, 'Wheel: 15px');
         this.drawRadialMeasurement(truck.x + 95, truck.y + truck.height + 15, 15, 'Wheel: 15px');
-        
+
         // Port measurement
         this.drawRadialMeasurement(truck.port.x, truck.port.y, truck.port.radius, 'Port: 12px');
-        
+
         // Hose coil measurement (if visible)
         if (this.gameState === 'START') {
             this.drawRadialMeasurement(truck.hoseCoil.x, truck.hoseCoil.y, truck.hoseCoil.radius, 'Hose: 20px');
         }
-        
+
         // Ladder measurements
         if (ladder.visible) {
             this.drawMeasurement(ladder.x, ladder.y - 25, ladder.x + ladder.width, ladder.y - 25, '60px', 'top');
         }
     }
-    
+
     drawHydrantMeasurements() {
         const hydrant = this.hydrant;
-        
+
         // Main body measurements
         this.drawMeasurement(hydrant.x - 30, hydrant.y, hydrant.x - 30, hydrant.y + hydrant.height, `${hydrant.height}px`, 'left');
         this.drawMeasurement(hydrant.x, hydrant.y + hydrant.height + 15, hydrant.x + hydrant.width, hydrant.y + hydrant.height + 15, `${hydrant.width}px`, 'bottom');
-        
+
         // Top cap
-        this.drawRadialMeasurement(hydrant.x + hydrant.width/2, hydrant.y, 25, 'Cap: 25px');
-        
+        this.drawRadialMeasurement(hydrant.x + hydrant.width / 2, hydrant.y, 25, 'Cap: 25px');
+
         // Port measurement
         this.drawRadialMeasurement(hydrant.port.x, hydrant.port.y, hydrant.port.radius, 'Port: 12px');
-        
+
         // Valve measurements
         this.drawMeasurement(hydrant.valve.x, hydrant.valve.y - 10, hydrant.valve.x + hydrant.valve.width, hydrant.valve.y - 10, '30px', 'top');
     }
-    
+
     drawBuildingMeasurements() {
         this.buildings.forEach((building, index) => {
             // Height measurement
             this.drawMeasurement(building.x - 20, building.y, building.x - 20, building.y + building.height, `${building.height}px`, 'left');
-            
+
             // Width measurement  
             this.drawMeasurement(building.x, building.y - 10, building.x + building.width, building.y - 10, `${building.width}px`, 'top');
-            
+
             // Building label
             this.ctx.fillStyle = '#000';
             this.ctx.fillText(`Building ${index + 1}`, building.x + 5, building.y + 20);
         });
     }
-    
+
     drawCoordinates() {
         const elements = [
             { x: this.truck.x, y: this.truck.y, label: `Truck (${this.truck.x}, ${this.truck.y})` },
             { x: this.hydrant.x, y: this.hydrant.y, label: `Hydrant (${this.hydrant.x}, ${this.hydrant.y})` },
             { x: this.nozzle.x, y: this.nozzle.y, label: `Nozzle (${Math.round(this.nozzle.x)}, ${Math.round(this.nozzle.y)})` }
         ];
-        
+
         elements.forEach(element => {
             this.drawCoordinate(element.x, element.y, element.label);
         });
     }
-    
+
     drawMeasurement(x1, y1, x2, y2, text, position) {
         // Draw measurement line
         this.ctx.beginPath();
         this.ctx.moveTo(x1, y1);
         this.ctx.lineTo(x2, y2);
         this.ctx.stroke();
-        
+
         // Draw end markers
         const markerSize = 4;
         this.ctx.beginPath();
@@ -2746,11 +2781,11 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.moveTo(x2, y2 - markerSize);
         this.ctx.lineTo(x2, y2 + markerSize);
         this.ctx.stroke();
-        
+
         // Draw text
         const centerX = (x1 + x2) / 2;
         const centerY = (y1 + y2) / 2;
-        
+
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         this.ctx.fillRect(centerX - 25, centerY - 10, 50, 20);
         this.ctx.strokeRect(centerX - 25, centerY - 10, 50, 20);
@@ -2759,14 +2794,14 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillText(text, centerX, centerY + 4);
         this.ctx.textAlign = 'start';
     }
-    
+
     drawRadialMeasurement(x, y, radius, text) {
         // Draw radius line
         this.ctx.beginPath();
         this.ctx.moveTo(x, y);
         this.ctx.lineTo(x + radius, y);
         this.ctx.stroke();
-        
+
         // Draw text
         const textWidth = this.ctx.measureText(text).width;
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
@@ -2775,14 +2810,14 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#000';
         this.ctx.fillText(text, x + radius + 10, y + 4);
     }
-    
+
     drawCoordinate(x, y, text) {
         // Draw coordinate point
         this.ctx.fillStyle = '#e74c3c';
         this.ctx.beginPath();
         this.ctx.arc(x, y, 4, 0, Math.PI * 2);
         this.ctx.fill();
-        
+
         // Draw label
         const textWidth = this.ctx.measureText(text).width;
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';

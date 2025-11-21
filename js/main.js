@@ -183,7 +183,7 @@ function showScreen(screenId) {
     // Hide all game screens
     const allScreens = document.querySelectorAll('.game-screen');
     allScreens.forEach(screen => screen.classList.add('hidden'));
-    
+
     // Show target screen
     const targetScreen = document.getElementById(screenId);
     if (targetScreen) {
@@ -194,11 +194,15 @@ function showScreen(screenId) {
 }
 
 function startAudio() {
-    if (Tone.context.state !== 'running') {
-        Tone.start();
-    }
-    if (!backgroundMusic) {
-        setupBackgroundMusic();
+    try {
+        if (typeof Tone !== 'undefined' && Tone.context && Tone.context.state !== 'running') {
+            Tone.start();
+        }
+        if (!backgroundMusic) {
+            setupBackgroundMusic();
+        }
+    } catch (e) {
+        console.warn('Audio start failed:', e);
     }
     window.removeEventListener('click', startAudio, true);
 }
@@ -209,42 +213,55 @@ let backgroundMusic = null;
 let musicPlaying = false;
 
 function setupBackgroundMusic() {
-    const musicSynth = new Tone.FMSynth({
-        harmonicity: 1.5,
-        modulationIndex: 10,
-        oscillator: { type: "sine" },
-        envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 },
-        modulation: { type: "square" },
-        modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0, release: 0.5 }
-    }).toDestination();
-    musicSynth.volume.value = -12; // Lower the volume
+    try {
+        if (typeof Tone === 'undefined') return;
 
-    const melody = ['C4', 'E4', 'G4', 'C5', 'A4', 'G4', 'E4'];
-    let noteIndex = 0;
+        const musicSynth = new Tone.FMSynth({
+            harmonicity: 1.5,
+            modulationIndex: 10,
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 },
+            modulation: { type: "square" },
+            modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0, release: 0.5 }
+        }).toDestination();
+        musicSynth.volume.value = -12; // Lower the volume
 
-    backgroundMusic = new Tone.Loop(time => {
-        let note = melody[noteIndex % melody.length];
-        musicSynth.triggerAttackRelease(note, '8n', time);
-        noteIndex++;
-    }, '4n');
+        const melody = ['C4', 'E4', 'G4', 'C5', 'A4', 'G4', 'E4'];
+        let noteIndex = 0;
 
-    Tone.Transport.start();
+        backgroundMusic = new Tone.Loop(time => {
+            let note = melody[noteIndex % melody.length];
+            musicSynth.triggerAttackRelease(note, '8n', time);
+            noteIndex++;
+        }, '4n');
+
+        Tone.Transport.start();
+    } catch (e) {
+        console.warn('Background music setup failed:', e);
+    }
 }
 
 function toggleBackgroundMusic(forceState) {
     const shouldBePlaying = forceState !== undefined ? forceState : !musicPlaying;
-    if (shouldBePlaying) {
-        if (!musicPlaying) {
-            backgroundMusic.start(0);
-            musicPlaying = true;
+
+    if (!backgroundMusic) return;
+
+    try {
+        if (shouldBePlaying) {
+            if (!musicPlaying) {
+                backgroundMusic.start(0);
+                musicPlaying = true;
+            }
+        } else {
+            if (musicPlaying) {
+                backgroundMusic.stop();
+                musicPlaying = false;
+            }
         }
-    } else {
-        if (musicPlaying) {
-            backgroundMusic.stop();
-            musicPlaying = false;
-        }
+        muteButton.textContent = musicPlaying ? '🎵' : '🔇';
+    } catch (e) {
+        console.warn('Toggle music failed:', e);
     }
-    muteButton.textContent = musicPlaying ? '🎵' : '🔇';
 }
 
 // --- Scene Particle Effects ---
