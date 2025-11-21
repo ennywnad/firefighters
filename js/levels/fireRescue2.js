@@ -1145,7 +1145,7 @@ class FireRescueLevel {
             });
 
             // Limit number of puddles for performance
-            if (this.puddles.length > 30) {
+            if (this.puddles.length > 300) {
                 this.puddles.shift(); // Remove oldest puddle
             }
         }
@@ -1586,27 +1586,60 @@ class FireRescueLevel {
         }
 
         // Update water drops with enhanced gravity
-        this.waterDrops.forEach((drop, index) => {
+        // Update water drops with enhanced gravity
+        // Iterate backwards to safely remove elements
+        for (let i = this.waterDrops.length - 1; i >= 0; i--) {
+            const drop = this.waterDrops[i];
             drop.x += drop.vx;
             drop.y += drop.vy;
             drop.vy += 0.15; // Enhanced gravity for more realistic arc
             drop.life--;
 
+            // Check for collision with fires first (water should hit fire before building)
+            let hitFire = false;
+            for (const fire of this.fires) {
+                const dist = Math.hypot(drop.x - fire.x, drop.y - fire.y);
+                if (dist < fire.size) {
+                    fire.life -= 12; // Main drops are more effective
+                    this.waterDrops.splice(i, 1);
+                    hitFire = true;
+                    break;
+                }
+            }
+            if (hitFire) continue;
+
+            // Check for collision with buildings
+            let hitBuilding = false;
+            for (const building of this.buildings) {
+                if (drop.x >= building.x &&
+                    drop.x <= building.x + building.width &&
+                    drop.y >= building.y &&
+                    drop.y <= building.y + building.height) {
+
+                    this.createPuddle(drop.x, drop.y);
+                    this.waterDrops.splice(i, 1);
+                    hitBuilding = true;
+                    break;
+                }
+            }
+            if (hitBuilding) continue;
+
             // Check if water hits the ground
             if (drop.y >= this.canvas.height - 100) {
                 this.createPuddle(drop.x, this.canvas.height - 100);
-                this.waterDrops.splice(index, 1);
+                this.waterDrops.splice(i, 1);
             } else if (drop.life <= 0) {
                 // When water drop expires (hits fire or disappears), create puddle where it lands
                 this.createPuddle(drop.x, Math.min(drop.y, this.canvas.height - 100));
-                this.waterDrops.splice(index, 1);
+                this.waterDrops.splice(i, 1);
             } else if (drop.y > this.canvas.height) {
-                this.waterDrops.splice(index, 1);
+                this.waterDrops.splice(i, 1);
             }
-        });
+        }
 
         // Update mist particles with different physics for heavy vs light mist
-        this.mistParticles.forEach((mist, index) => {
+        for (let i = this.mistParticles.length - 1; i >= 0; i--) {
+            const mist = this.mistParticles[i];
             mist.x += mist.vx;
             mist.y += mist.vy;
 
@@ -1625,12 +1658,13 @@ class FireRescueLevel {
             // Remove mist particles when they fade or hit ground
             if (mist.life <= 0 || mist.opacity < 0.1 || mist.y >= this.canvas.height - 100) {
                 // Mist doesn't create puddles, just disappears
-                this.mistParticles.splice(index, 1);
+                this.mistParticles.splice(i, 1);
             }
-        });
+        }
 
         // Update puddles
-        this.puddles.forEach((puddle, index) => {
+        for (let i = this.puddles.length - 1; i >= 0; i--) {
+            const puddle = this.puddles[i];
             // Grow puddle if not at max size
             if (puddle.size < puddle.maxSize) {
                 puddle.size += puddle.growthRate;
@@ -1644,12 +1678,14 @@ class FireRescueLevel {
 
             // Remove fully faded puddles
             if (puddle.opacity <= 0) {
-                this.puddles.splice(index, 1);
+                this.puddles.splice(i, 1);
             }
-        });
+        }
 
         // Update fires and check collisions
-        this.fires.forEach((fire, fireIndex) => {
+        // Update fires and check collisions
+        for (let i = this.fires.length - 1; i >= 0; i--) {
+            const fire = this.fires[i];
             fire.flicker += 0.1;
 
             // Handle fire growth animation
@@ -1661,26 +1697,18 @@ class FireRescueLevel {
                 }
             }
 
-            // Check water collision with main drops
-            this.waterDrops.forEach((drop, dropIndex) => {
-                const dist = Math.hypot(drop.x - fire.x, drop.y - fire.y);
-                if (dist < fire.size) {
-                    fire.life -= 12; // Main drops are more effective
-                    this.waterDrops.splice(dropIndex, 1);
-                }
-            });
-
             // Check mist collision (less effective but still works)
-            this.mistParticles.forEach((mist, mistIndex) => {
+            for (let k = this.mistParticles.length - 1; k >= 0; k--) {
+                const mist = this.mistParticles[k];
                 const dist = Math.hypot(mist.x - fire.x, mist.y - fire.y);
                 if (dist < fire.size) {
                     fire.life -= 3; // Mist is less effective
-                    this.mistParticles.splice(mistIndex, 1);
+                    this.mistParticles.splice(k, 1);
                 }
-            });
+            }
 
             if (fire.life <= 0) {
-                this.fires.splice(fireIndex, 1);
+                this.fires.splice(i, 1);
                 this.firesExtinguished++;
                 this.actionSynth.triggerAttackRelease('A5', '4n');
 
@@ -1689,7 +1717,7 @@ class FireRescueLevel {
                     window.firefighterScoreboard.recordFireExtinguished();
                 }
             }
-        });
+        }
 
         // Check win condition - but don't auto-end in manual mode unless explicitly ended
         if (this.fires.length === 0 && this.firesExtinguished > 0 && this.timerMode !== 'manual') {
