@@ -1467,9 +1467,9 @@ class FireRescueLevel {
                 this.waterDrops.push({
                     x: this.nozzle.x,
                     y: this.nozzle.y,
-                    vx: Math.cos(this.nozzle.angle) * (10 + Math.random() * 3),
-                    vy: Math.sin(this.nozzle.angle) * (10 + Math.random() * 3),
-                    life: 80,
+                    vx: Math.cos(this.nozzle.angle) * (20 + Math.random() * 5),
+                    vy: Math.sin(this.nozzle.angle) * (20 + Math.random() * 5),
+                    life: 130,
                     size: 4 + Math.random() * 2,
                     isMist: false
                 });
@@ -1484,7 +1484,7 @@ class FireRescueLevel {
             // Regular mist particles - lighter, more affected by gravity
             for (let i = 0; i < 4; i++) {
                 const spreadAngle = this.nozzle.angle + (Math.random() - 0.5) * 0.8; // More spread
-                const speed = 4 + Math.random() * 4; // Slower than main stream
+                const speed = 8 + Math.random() * 4; // Faster mist for more pressure
                 this.mistParticles.push({
                     x: this.nozzle.x + Math.cos(this.nozzle.angle) * 20, // Start a bit ahead
                     y: this.nozzle.y + Math.sin(this.nozzle.angle) * 20,
@@ -1501,7 +1501,7 @@ class FireRescueLevel {
             for (let i = 0; i < 8; i++) {
                 // Bias the angle slightly downward from the main jet
                 const downwardBias = this.nozzle.angle + 0.3 + (Math.random() - 0.5) * 0.6;
-                const speed = 3 + Math.random() * 3; // Even slower
+                const speed = 7 + Math.random() * 3; // Faster heavy mist
                 const startDistance = 25 + Math.random() * 15; // Start further out
                 this.mistParticles.push({
                     x: this.nozzle.x + Math.cos(this.nozzle.angle) * startDistance,
@@ -1538,9 +1538,9 @@ class FireRescueLevel {
                 this.waterDrops.push({
                     x: cannonTipX,
                     y: cannonTipY,
-                    vx: Math.cos(ladder.cannonAngle) * (10 + Math.random() * 3),
-                    vy: Math.sin(ladder.cannonAngle) * (10 + Math.random() * 3),
-                    life: 80,
+                    vx: Math.cos(ladder.cannonAngle) * (15 + Math.random() * 5),
+                    vy: Math.sin(ladder.cannonAngle) * (15 + Math.random() * 5),
+                    life: 100,
                     size: 4 + Math.random() * 2,
                     isMist: false
                 });
@@ -1554,7 +1554,7 @@ class FireRescueLevel {
             // Regular mist particles from cannon
             for (let i = 0; i < 4; i++) {
                 const spreadAngle = ladder.cannonAngle + (Math.random() - 0.5) * 0.8;
-                const speed = 4 + Math.random() * 4;
+                const speed = 6 + Math.random() * 4;
                 this.mistParticles.push({
                     x: cannonTipX + Math.cos(ladder.cannonAngle) * 20,
                     y: cannonTipY + Math.sin(ladder.cannonAngle) * 20,
@@ -1570,7 +1570,7 @@ class FireRescueLevel {
             // Heavier mist from cannon
             for (let i = 0; i < 8; i++) {
                 const downwardBias = ladder.cannonAngle + 0.3 + (Math.random() - 0.5) * 0.6;
-                const speed = 3 + Math.random() * 3;
+                const speed = 5 + Math.random() * 3;
                 const startDistance = 25 + Math.random() * 15;
                 this.mistParticles.push({
                     x: cannonTipX + Math.cos(ladder.cannonAngle) * startDistance,
