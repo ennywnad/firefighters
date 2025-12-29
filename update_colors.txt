@@ -1,0 +1,8 @@
+Line 2193: Normal red → this.truck1Color
+Line 2257: #e74c3c → this.truck1Color (detailed truck body)
+Line 2268: #c0392b → this.getDarkerColor(this.truck1Color) (detailed truck cab)
+Line 2297: #e74c3c → this.truck1Color (detailed truck lights)Line 2370: #e74c3c → this.truck2Color (truck2 body)Line 2382: #c0392b → this.getDarkerColor(this.truck2Color) (truck2 cab)
+Line 2395: #e74c3c → this.truck2Color (truck2 lights)
+Line 2579: #9ACD32 → this.truck3Color (truck3 body)
+Line 2591: #7BA428 → this.getDarkerColor(this.truck3Color) (truck3 cab)
+Line 2604: #9ACD32 → this.truck3Color (truck3 lights)

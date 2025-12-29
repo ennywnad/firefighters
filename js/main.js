@@ -53,6 +53,7 @@ function startFireRescueGame() {
 
     // Set up all option radio buttons
     setupTruckStyleRadios();
+    setupTruckColorRadios();
     setupFunOptions();
     setupHydrantStyleRadios();
     setupDebugModeRadios();
@@ -147,6 +148,54 @@ function updateTruckStyleRadiosFromGame() {
     classicRadio.checked = (targetStyle === 'classic');
     detailedRadio.checked = (targetStyle === 'detailed');
     localStorage.setItem('firefighterTruckStyle', currentFireGame.truckStyle);
+}
+
+// Truck color radio functionality
+function setupTruckColorRadios() {
+    // Truck 1 colors
+    const truck1Radios = document.querySelectorAll('input[name="truck1-color"]');
+    if (truck1Radios.length > 0) {
+        const savedColor = localStorage.getItem('firefighterTruck1Color') || '#e74c3c';
+        truck1Radios.forEach(radio => {
+            radio.checked = (radio.value === savedColor);
+            radio.addEventListener('change', () => {
+                if (radio.checked && currentFireGame) {
+                    currentFireGame.truck1Color = radio.value;
+                    localStorage.setItem('firefighterTruck1Color', radio.value);
+                }
+            });
+        });
+    }
+
+    // Truck 2 colors
+    const truck2Radios = document.querySelectorAll('input[name="truck2-color"]');
+    if (truck2Radios.length > 0) {
+        const savedColor = localStorage.getItem('firefighterTruck2Color') || '#e74c3c';
+        truck2Radios.forEach(radio => {
+            radio.checked = (radio.value === savedColor);
+            radio.addEventListener('change', () => {
+                if (radio.checked && currentFireGame) {
+                    currentFireGame.truck2Color = radio.value;
+                    localStorage.setItem('firefighterTruck2Color', radio.value);
+                }
+            });
+        });
+    }
+
+    // Truck 3 colors
+    const truck3Radios = document.querySelectorAll('input[name="truck3-color"]');
+    if (truck3Radios.length > 0) {
+        const savedColor = localStorage.getItem('firefighterTruck3Color') || '#9ACD32';
+        truck3Radios.forEach(radio => {
+            radio.checked = (radio.value === savedColor);
+            radio.addEventListener('change', () => {
+                if (radio.checked && currentFireGame) {
+                    currentFireGame.truck3Color = radio.value;
+                    localStorage.setItem('firefighterTruck3Color', radio.value);
+                }
+            });
+        });
+    }
 }
 
 function showHeroReport(message) {
