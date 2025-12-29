@@ -51,6 +51,11 @@ class FireRescueLevel {
         this.newTruckStyle = null; // For pending truck style changes
         this.pendingTruckStyleChange = false;
 
+        // Truck color properties
+        this.truck1Color = localStorage.getItem('firefighterTruck1Color') || '#e74c3c';
+        this.truck2Color = localStorage.getItem('firefighterTruck2Color') || '#e74c3c';
+        this.truck3Color = localStorage.getItem('firefighterTruck3Color') || '#9ACD32';
+
         // Hydrant style properties
         this.hydrantStyle = localStorage.getItem('firefighterHydrantStyle') || 'classic';
 
@@ -107,7 +112,39 @@ class FireRescueLevel {
             }
         };
 
-        // Walkie-talkie for calling truck2
+        // Third truck with extending ladder (yellow-green color)
+        this.truck3 = {
+            x: 0, // Will be set based on canvas width
+            y: 400,
+            targetX: 0, // Will be set to left side of canvas
+            width: 160,
+            height: 90,
+            isActive: false,
+            isRollingIn: false,
+            hasArrived: false,
+            wheelRotation: 0,
+            lightFlash: false,
+
+            ladder: {
+                baseX: 0,
+                baseY: -45,
+                angle: 0, // 0° = horizontal
+                targetAngle: 45,
+                isExtending: false,
+                isRetracting: false,
+
+                baseLength: 80,
+                extensionLength: 0,
+                maxExtension: 60,
+
+                rotationComplete: false,
+                extensionComplete: false,
+
+                cannonAngle: 0 // Water cannon angle (controlled by mouse)
+            }
+        };
+
+        // Walkie-talkie for calling truck2 and truck3
         this.walkieTalkie = {
             x: 0, // Will be set based on canvas width
             y: 0, // Will be set based on canvas height
@@ -115,7 +152,10 @@ class FireRescueLevel {
             height: 85,
             antennaHeight: 25,
             isHovered: false,
-            isPttPressed: false // PTT = Push To Talk button
+            isPttPressed: false, // PTT = Push To Talk button
+            isPttPressed2: false, // Second PTT button for truck3
+            button1Hovered: false,
+            button2Hovered: false
         };
 
         this.hydrant = {
@@ -571,6 +611,151 @@ class FireRescueLevel {
         }
     }
 
+    // ====== TRUCK 3 FUNCTIONS ======
+
+    callTruck3() {
+        if (this.truck3.isActive || this.truck3.isRollingIn) {
+            // Truck already active or arriving
+            return;
+        }
+
+        this.truck3.isActive = true;
+        this.truck3.isRollingIn = true;
+        this.truck3.hasArrived = false;
+        this.truck3.x = -200; // Start off-screen left
+        this.truck3.wheelRotation = 0;
+        this.truck3.lightFlash = false;
+
+        // Play horn sound
+        setTimeout(() => {
+            this.hornSynth.triggerAttackRelease('D4', '4n');
+        }, 100);
+    }
+
+    animateTruck3() {
+        if (!this.truck3.isRollingIn) return;
+
+        // Roll from left to target position
+        const speed = 4; // Positive = moving right, 4px per frame
+        this.truck3.x += speed;
+
+        // Animate wheel rotation (clockwise when moving right)
+        this.truck3.wheelRotation += 0.2;
+
+        // Flash emergency lights
+        this.truck3.lightFlash = !this.truck3.lightFlash;
+
+        // Check if reached target
+        if (this.truck3.x >= this.truck3.targetX) {
+            this.truck3.x = this.truck3.targetX;
+            this.truck3.isRollingIn = false;
+            this.truck3.hasArrived = true;
+
+            // Play arrival sound
+            this.actionSynth.triggerAttackRelease('A3', '4n');
+        }
+    }
+
+    toggleLadder3() {
+        if (!this.truck3.hasArrived) {
+            return; // Truck must arrive first
+        }
+
+        const ladder = this.truck3.ladder;
+
+        if (ladder.isExtending || ladder.isRetracting) {
+            return; // Already animating
+        }
+
+        if (ladder.extensionComplete) {
+            // Retract ladder
+            this.startLadderRetraction3();
+        } else {
+            // Extend ladder
+            this.startLadderExtension3();
+        }
+    }
+
+    startLadderExtension3() {
+        const ladder = this.truck3.ladder;
+
+        // Reset ladder state
+        ladder.angle = 0;
+        ladder.extensionLength = 0;
+        ladder.isExtending = true;
+        ladder.isRetracting = false;
+        ladder.rotationComplete = false;
+        ladder.extensionComplete = false;
+
+        // Play sound
+        this.actionSynth.triggerAttackRelease('A4', '8n');
+    }
+
+    startLadderRetraction3() {
+        const ladder = this.truck3.ladder;
+
+        ladder.isExtending = false;
+        ladder.isRetracting = true;
+        ladder.rotationComplete = false;
+        ladder.extensionComplete = false;
+
+        // Play sound
+        this.actionSynth.triggerAttackRelease('F4', '8n');
+    }
+
+    animateLadder3() {
+        const ladder = this.truck3.ladder;
+
+        if (ladder.isExtending) {
+            // PHASE 1: Rotation (0° to 45°)
+            if (!ladder.rotationComplete) {
+                const rotationSpeed = 1.5; // degrees per frame
+                ladder.angle = Math.min(ladder.angle + rotationSpeed, ladder.targetAngle);
+
+                if (ladder.angle >= ladder.targetAngle) {
+                    ladder.rotationComplete = true;
+                    // Play lock sound
+                    this.actionSynth.triggerAttackRelease('C5', '16n');
+                }
+                return;
+            }
+
+            // PHASE 2: Extension (telescoping)
+            if (!ladder.extensionComplete) {
+                const extensionSpeed = 2; // pixels per frame
+                ladder.extensionLength = Math.min(
+                    ladder.extensionLength + extensionSpeed,
+                    ladder.maxExtension
+                );
+
+                if (ladder.extensionLength >= ladder.maxExtension) {
+                    ladder.extensionComplete = true;
+                    ladder.isExtending = false;
+                    // Play extend complete sound
+                    this.actionSynth.triggerAttackRelease('E5', '16n');
+                }
+            }
+        }
+
+        if (ladder.isRetracting) {
+            // Reverse order: retract first, then rotate down
+            if (ladder.extensionLength > 0) {
+                const retractionSpeed = 2;
+                ladder.extensionLength = Math.max(0, ladder.extensionLength - retractionSpeed);
+            } else if (ladder.angle > 0) {
+                const rotationSpeed = 1.5;
+                ladder.angle = Math.max(0, ladder.angle - rotationSpeed);
+
+                if (ladder.angle <= 0) {
+                    ladder.angle = 0;
+                    ladder.isRetracting = false;
+                    // Play retract complete sound
+                    this.actionSynth.triggerAttackRelease('C4', '16n');
+                }
+            }
+        }
+    }
+
     startLadderExtension() {
         const ladder = this.truck2.ladder;
 
@@ -948,6 +1133,16 @@ class FireRescueLevel {
             this.truck2.x = this.truck2.targetX;
         }
 
+        // Position truck 3 to the left (comes from left side)
+        this.truck3.y = height - 190;
+        this.truck3.targetX = 50; // Position it on the left side
+        if (!this.truck3.isActive) {
+            this.truck3.x = -200; // Start off-screen left
+        } else if (this.truck3.hasArrived) {
+            // If truck3 has already arrived, update its position
+            this.truck3.x = this.truck3.targetX;
+        }
+
         // Update walkie-talkie position (bottom-right corner on the ground)
         this.walkieTalkie.x = width - 70;
         this.walkieTalkie.y = height - 95;
@@ -1154,16 +1349,26 @@ class FireRescueLevel {
     handleClick(e) {
         const pos = this.getMousePos(e);
 
-        // Check walkie-talkie click (always available, larger hit area)
+        // Check walkie-talkie clicks (always available)
         const wt = this.walkieTalkie;
-        const wtRect = {
-            x: wt.x - 5, // Add padding for easier clicking
-            y: wt.y - wt.antennaHeight - 5,
-            width: wt.width + 10,
-            height: wt.height + wt.antennaHeight + 10
+
+        // Calculate button positions (matching drawWalkieTalkie)
+        const buttonSpacing = 2;
+        const buttonWidth = (wt.width - 20 - buttonSpacing) / 2;
+        const buttonHeight = 25;
+        const buttonY = wt.y + 45;
+        const ptt1X = wt.x + 10;
+        const ptt2X = ptt1X + buttonWidth + buttonSpacing;
+
+        // Check button 1 (left) - truck2
+        const button1Rect = {
+            x: ptt1X,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
         };
-        if (this.isInRect(pos, wtRect)) {
-            // Visual feedback - press the PTT button
+        if (this.isInRect(pos, button1Rect)) {
+            // Visual feedback - press button 1
             this.walkieTalkie.isPttPressed = true;
             setTimeout(() => {
                 this.walkieTalkie.isPttPressed = false;
@@ -1173,6 +1378,28 @@ class FireRescueLevel {
                 this.callTruck2();
             } else {
                 this.toggleLadder();
+            }
+            return;
+        }
+
+        // Check button 2 (right) - truck3
+        const button2Rect = {
+            x: ptt2X,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        if (this.isInRect(pos, button2Rect)) {
+            // Visual feedback - press button 2
+            this.walkieTalkie.isPttPressed2 = true;
+            setTimeout(() => {
+                this.walkieTalkie.isPttPressed2 = false;
+            }, 150);
+
+            if (!this.truck3.hasArrived) {
+                this.callTruck3();
+            } else {
+                this.toggleLadder3();
             }
             return;
         }
@@ -1187,6 +1414,20 @@ class FireRescueLevel {
             };
             if (this.isInRect(pos, truck2Rect)) {
                 this.toggleLadder();
+                return;
+            }
+        }
+
+        // Check truck3 click (toggle ladder)
+        if (this.truck3.hasArrived) {
+            const truck3Rect = {
+                x: this.truck3.x,
+                y: this.truck3.y,
+                width: this.truck3.width,
+                height: this.truck3.height
+            };
+            if (this.isInRect(pos, truck3Rect)) {
+                this.toggleLadder3();
                 return;
             }
         }
@@ -1236,15 +1477,37 @@ class FireRescueLevel {
 
         this.mouse = this.getMousePos(e);
 
-        // Check if hovering over walkie-talkie
+        // Check if hovering over walkie-talkie buttons
         const wt = this.walkieTalkie;
-        const wtRect = {
-            x: wt.x - 5,
-            y: wt.y - wt.antennaHeight - 5,
-            width: wt.width + 10,
-            height: wt.height + wt.antennaHeight + 10
+
+        // Calculate button positions (matching drawWalkieTalkie and handleClick)
+        const buttonSpacing = 2;
+        const buttonWidth = (wt.width - 20 - buttonSpacing) / 2;
+        const buttonHeight = 25;
+        const buttonY = wt.y + 45;
+        const ptt1X = wt.x + 10;
+        const ptt2X = ptt1X + buttonWidth + buttonSpacing;
+
+        // Check button 1 hover
+        const button1Rect = {
+            x: ptt1X,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
         };
-        this.walkieTalkie.isHovered = this.isInRect(this.mouse, wtRect);
+        this.walkieTalkie.button1Hovered = this.isInRect(this.mouse, button1Rect);
+
+        // Check button 2 hover
+        const button2Rect = {
+            x: ptt2X,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        this.walkieTalkie.button2Hovered = this.isInRect(this.mouse, button2Rect);
+
+        // Overall walkie-talkie hover (for any part of it)
+        this.walkieTalkie.isHovered = this.walkieTalkie.button1Hovered || this.walkieTalkie.button2Hovered;
 
         if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
             this.updateNozzleAngle();
@@ -1295,6 +1558,25 @@ class FireRescueLevel {
             const totalLength = ladder.baseLength + ladder.extensionLength;
             const angleRad = (ladder.angle * Math.PI) / 180;
             const cannonX = anchorX - Math.cos(angleRad) * totalLength;
+            const cannonY = anchorY - Math.sin(angleRad) * totalLength;
+
+            // Calculate angle from cannon to mouse
+            const cdx = this.mouse.x - cannonX;
+            const cdy = this.mouse.y - cannonY;
+            ladder.cannonAngle = Math.atan2(cdy, cdx);
+        }
+
+        // Also update truck3's water cannon if ladder is extended
+        if (this.truck3.isActive && this.truck3.ladder.extensionComplete) {
+            const ladder = this.truck3.ladder;
+            const truck = this.truck3;
+
+            // Calculate cannon position (truck3's ladder extends to the RIGHT)
+            const anchorX = truck.x + 20;
+            const anchorY = truck.y - 5;
+            const totalLength = ladder.baseLength + ladder.extensionLength;
+            const angleRad = (ladder.angle * Math.PI) / 180;
+            const cannonX = anchorX + Math.cos(angleRad) * totalLength;
             const cannonY = anchorY - Math.sin(angleRad) * totalLength;
 
             // Calculate angle from cannon to mouse
@@ -1442,6 +1724,12 @@ class FireRescueLevel {
             this.animateLadder();
         }
 
+        // Update truck3 animations
+        if (this.truck3.isActive) {
+            this.animateTruck3();
+            this.animateLadder3();
+        }
+
         // Check if grace period has ended and spawn initial fires
         const timeSinceStart = Date.now() - this.gameStartTime;
         if (timeSinceStart >= this.gracePeriodDuration && this.fires.length === 0 && this.totalFires === 0) {
@@ -1527,6 +1815,75 @@ class FireRescueLevel {
             const totalLength = ladder.baseLength + ladder.extensionLength;
             const angleRad = (ladder.angle * Math.PI) / 180;
             const cannonX = anchorX - Math.cos(angleRad) * totalLength;
+            const cannonY = anchorY - Math.sin(angleRad) * totalLength;
+
+            // Offset cannon tip slightly forward
+            const cannonTipX = cannonX + Math.cos(ladder.cannonAngle) * 26;
+            const cannonTipY = cannonY + Math.sin(ladder.cannonAngle) * 26;
+
+            // Main water stream from cannon
+            for (let i = 0; i < 2; i++) {
+                this.waterDrops.push({
+                    x: cannonTipX,
+                    y: cannonTipY,
+                    vx: Math.cos(ladder.cannonAngle) * (15 + Math.random() * 5),
+                    vy: Math.sin(ladder.cannonAngle) * (15 + Math.random() * 5),
+                    life: 100,
+                    size: 4 + Math.random() * 2,
+                    isMist: false
+                });
+                this.waterUsed++;
+
+                if (window.firefighterScoreboard) {
+                    window.firefighterScoreboard.recordWaterUsed(0.5);
+                }
+            }
+
+            // Regular mist particles from cannon
+            for (let i = 0; i < 4; i++) {
+                const spreadAngle = ladder.cannonAngle + (Math.random() - 0.5) * 0.8;
+                const speed = 6 + Math.random() * 4;
+                this.mistParticles.push({
+                    x: cannonTipX + Math.cos(ladder.cannonAngle) * 20,
+                    y: cannonTipY + Math.sin(ladder.cannonAngle) * 20,
+                    vx: Math.cos(spreadAngle) * speed,
+                    vy: Math.sin(spreadAngle) * speed,
+                    life: 40 + Math.random() * 20,
+                    size: 1 + Math.random() * 2,
+                    opacity: 0.4 + Math.random() * 0.4,
+                    type: 'light'
+                });
+            }
+
+            // Heavier mist from cannon
+            for (let i = 0; i < 8; i++) {
+                const downwardBias = ladder.cannonAngle + 0.3 + (Math.random() - 0.5) * 0.6;
+                const speed = 5 + Math.random() * 3;
+                const startDistance = 25 + Math.random() * 15;
+                this.mistParticles.push({
+                    x: cannonTipX + Math.cos(ladder.cannonAngle) * startDistance,
+                    y: cannonTipY + Math.sin(ladder.cannonAngle) * startDistance,
+                    vx: Math.cos(downwardBias) * speed,
+                    vy: Math.sin(downwardBias) * speed,
+                    life: 60 + Math.random() * 30,
+                    size: 1.5 + Math.random() * 2.5,
+                    opacity: 0.5 + Math.random() * 0.3,
+                    type: 'heavy'
+                });
+            }
+        }
+
+        // Spawn water drops from truck3's cannon when it's extended and spraying
+        if (this.isSpraying && this.gameState === 'SPRAYING' && this.truck3.isActive && this.truck3.ladder.extensionComplete) {
+            const ladder = this.truck3.ladder;
+            const truck = this.truck3;
+
+            // Calculate cannon position (truck3's ladder extends to the RIGHT)
+            const anchorX = truck.x + 20;
+            const anchorY = truck.y - 5;
+            const totalLength = ladder.baseLength + ladder.extensionLength;
+            const angleRad = (ladder.angle * Math.PI) / 180;
+            const cannonX = anchorX + Math.cos(angleRad) * totalLength;
             const cannonY = anchorY - Math.sin(angleRad) * totalLength;
 
             // Offset cannon tip slightly forward
@@ -1765,6 +2122,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.drawPuddles();
         this.drawTruck();
         this.drawTruck2(); // Draw second truck
+        this.drawTruck3(); // Draw third truck (yellow-green)
         this.drawHydrant();
         this.drawLadder();
         this.drawHose();
@@ -1802,13 +2160,28 @@ ${this.firesExtinguished === this.totalFires ?
         }
     }
 
+    getDarkerColor(hexColor) {
+        // Convert hex to RGB
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+
+        // Darken by 20%
+        const darkerR = Math.max(0, Math.floor(r * 0.8));
+        const darkerG = Math.max(0, Math.floor(g * 0.8));
+        const darkerB = Math.max(0, Math.floor(b * 0.8));
+
+        // Convert back to hex
+        return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
+    }
+
     drawClassicTruck() {
         // Main body
-        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillStyle = this.truck1Color;
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
 
         // Cab (at right edge, aligned with truck body)
-        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillStyle = this.getDarkerColor(this.truck1Color);
         this.ctx.fillRect(this.truck.x + 105, this.truck.y, 40, 50);
 
         // Emergency lights on cab roof (smaller for classic truck)
@@ -1880,11 +2253,11 @@ ${this.firesExtinguished === this.totalFires ?
 
     drawDetailedTruck() {
         // Main body with panels
-        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillStyle = this.truck1Color;
         this.ctx.fillRect(this.truck.x, this.truck.y, this.truck.width, this.truck.height);
 
         // Equipment compartment panels
-        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.strokeStyle = this.getDarkerColor(this.truck1Color);
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(this.truck.x + 10, this.truck.y + 10, 25, 25);
         this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 10, 25, 25);
@@ -1892,7 +2265,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(this.truck.x + 40, this.truck.y + 40, 25, 25);
 
         // Cab with more detail (at right edge, aligned with truck body)
-        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillStyle = this.getDarkerColor(this.truck1Color);
         this.ctx.fillRect(this.truck.x + 105, this.truck.y, 40, 50);
 
         // Cab windows
@@ -1995,11 +2368,11 @@ ${this.firesExtinguished === this.totalFires ?
         const truck = this.truck2;
 
         // Main body with panels (based on detailed truck)
-        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillStyle = this.truck2Color;
         this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
 
         // Equipment compartment panels (mirrored to right side)
-        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.strokeStyle = this.getDarkerColor(this.truck2Color);
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(truck.x + truck.width - 38, truck.y + 10, 28, 28);
         this.ctx.strokeRect(truck.x + truck.width - 71, truck.y + 10, 28, 28);
@@ -2007,7 +2380,7 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.strokeRect(truck.x + truck.width - 71, truck.y + 43, 28, 28);
 
         // Cab with more detail (at left edge, aligned with truck body)
-        this.ctx.fillStyle = '#c0392b';
+        this.ctx.fillStyle = this.getDarkerColor(this.truck2Color);
         this.ctx.fillRect(truck.x, truck.y, 45, 50);
 
         // Cab windows (aligned with truck body corner)
@@ -2196,6 +2569,189 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.restore();
     }
 
+    // ====== TRUCK 3 DRAWING FUNCTIONS ======
+
+    drawTruck3() {
+        if (!this.truck3.isActive) return;
+
+        const truck = this.truck3;
+
+        // Main body with panels (yellow-green color - lime/chartreuse)
+        this.ctx.fillStyle = this.truck3Color;
+        this.ctx.fillRect(truck.x, truck.y, truck.width, truck.height);
+
+        // Equipment compartment panels (mirrored to left side since truck comes from left)
+        this.ctx.strokeStyle = this.getDarkerColor(this.truck3Color);
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(truck.x + 10, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + 43, truck.y + 10, 28, 28);
+        this.ctx.strokeRect(truck.x + 10, truck.y + 43, 28, 28);
+        this.ctx.strokeRect(truck.x + 43, truck.y + 43, 28, 28);
+
+        // Cab with more detail (at right edge, aligned with truck body)
+        this.ctx.fillStyle = this.getDarkerColor(this.truck3Color);
+        this.ctx.fillRect(truck.x + truck.width - 45, truck.y, 45, 50);
+
+        // Cab windows
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.fillRect(truck.x + truck.width - 40, truck.y + 5, 35, 22);
+
+        // Emergency lights on top of cab
+        const shouldFlash = (truck.isRollingIn && truck.lightFlash) ||
+            (this.emergencyLights && Math.floor(Date.now() / 300) % 2 === 0);
+        if (shouldFlash) {
+            this.ctx.fillStyle = '#fff200'; // Bright yellow when flashing
+        } else {
+            this.ctx.fillStyle = '#9ACD32'; // Normal yellow-green
+        }
+        this.ctx.beginPath();
+        this.ctx.arc(truck.x + truck.width - 35, truck.y - 3, 3, 0, Math.PI * 2);
+        this.ctx.arc(truck.x + truck.width - 15, truck.y - 3, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Wheels with rotation animation
+        this.drawTruck3Wheels(truck);
+
+        // Bumper (at right edge)
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(truck.x + truck.width - 50, truck.y + truck.height - 5, 50, 8);
+
+        // Draw the extending ladder
+        this.drawTruck3Ladder(truck);
+    }
+
+    drawTruck3Wheels(truck) {
+        const wheelRadius = 18;
+        const wheelPositions = [
+            truck.x + 30,   // Front wheel (now on left)
+            truck.x + 110   // Rear wheel (now on right)
+        ];
+
+        wheelPositions.forEach(wheelX => {
+            // Outer tire
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.beginPath();
+            this.ctx.arc(wheelX, truck.y + truck.height + wheelRadius, wheelRadius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Rim (rotates during movement)
+            if (truck.isRollingIn) {
+                this.ctx.save();
+                this.ctx.translate(wheelX, truck.y + truck.height + wheelRadius);
+                this.ctx.rotate(truck.wheelRotation || 0);
+
+                // Spokes
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5;
+                    this.ctx.strokeStyle = '#95a5a6';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+            } else {
+                // Static rim when not moving
+                this.ctx.fillStyle = '#95a5a6';
+                this.ctx.beginPath();
+                this.ctx.arc(wheelX, truck.y + truck.height + wheelRadius, 10, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        });
+    }
+
+    drawTruck3Ladder(truck) {
+        const ladder = truck.ladder;
+
+        // Ladder anchored to left side of truck
+        const anchorX = truck.x + 20;
+        const anchorY = truck.y - 5;
+
+        // Calculate current total length
+        const totalLength = ladder.baseLength + ladder.extensionLength;
+
+        // Convert angle to radians
+        const angleRad = (ladder.angle * Math.PI) / 180;
+
+        // Calculate end point (extends to the RIGHT from the base)
+        const endX = anchorX + Math.cos(angleRad) * totalLength;
+        const endY = anchorY - Math.sin(angleRad) * totalLength;
+
+        // Draw base ladder section (dual rails)
+        this.ctx.strokeStyle = '#95a5a6'; // Gray metal
+        this.ctx.lineWidth = 6;
+
+        // Left rail (base section)
+        this.ctx.beginPath();
+        const baseEndX = anchorX + Math.cos(angleRad) * ladder.baseLength;
+        const baseEndY = anchorY - Math.sin(angleRad) * ladder.baseLength;
+        this.ctx.moveTo(anchorX - 3, anchorY);
+        this.ctx.lineTo(baseEndX - 3, baseEndY);
+        this.ctx.stroke();
+
+        // Right rail (base section)
+        this.ctx.beginPath();
+        this.ctx.moveTo(anchorX + 3, anchorY);
+        this.ctx.lineTo(baseEndX + 3, baseEndY);
+        this.ctx.stroke();
+
+        // Draw extension section if extended (narrower for telescoping effect)
+        if (ladder.extensionLength > 0) {
+            this.ctx.strokeStyle = '#7f8c8d'; // Slightly darker for depth
+            this.ctx.lineWidth = 4;
+
+            // Extension left rail
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseEndX - 2, baseEndY);
+            this.ctx.lineTo(endX - 2, endY);
+            this.ctx.stroke();
+
+            // Extension right rail
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseEndX + 2, baseEndY);
+            this.ctx.lineTo(endX + 2, endY);
+            this.ctx.stroke();
+        }
+
+        // Draw ladder rungs (evenly spaced along the entire length)
+        const numRungs = Math.floor(totalLength / 12); // One rung every 12 pixels
+        this.ctx.strokeStyle = '#95a5a6';
+        this.ctx.lineWidth = 2;
+
+        for (let i = 1; i <= numRungs; i++) {
+            const t = i / (numRungs + 1); // Position along the ladder (0 to 1)
+            const rungX = anchorX + Math.cos(angleRad) * totalLength * t;
+            const rungY = anchorY - Math.sin(angleRad) * totalLength * t;
+
+            this.ctx.beginPath();
+            // Calculate perpendicular direction for rung width
+            const perpAngle = angleRad + Math.PI / 2;
+            const rungHalfWidth = 3;
+            this.ctx.moveTo(
+                rungX + Math.cos(perpAngle) * rungHalfWidth,
+                rungY - Math.sin(perpAngle) * rungHalfWidth
+            );
+            this.ctx.lineTo(
+                rungX - Math.cos(perpAngle) * rungHalfWidth,
+                rungY + Math.sin(perpAngle) * rungHalfWidth
+            );
+            this.ctx.stroke();
+        }
+
+        // Draw water cannon at the end of the ladder
+        if (ladder.extensionComplete) {
+            this.drawWaterCannon(endX, endY, ladder.cannonAngle);
+        }
+
+        // Draw mounting bracket at base
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.beginPath();
+        this.ctx.arc(anchorX, anchorY, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
     drawWalkieTalkie() {
         const wt = this.walkieTalkie;
         const x = wt.x;
@@ -2259,7 +2815,8 @@ ${this.firesExtinguished === this.totalFires ?
         this.ctx.fillStyle = '#0e1111';
         this.ctx.fillRect(displayX, displayY, displayW, displayH);
 
-        // Display text or indicator
+        // Display text or indicators (two small LEDs, one for each truck)
+        // Truck2 indicator (left side)
         if (this.truck2.hasArrived) {
             this.ctx.fillStyle = '#27ae60'; // Green when truck arrived
         } else {
@@ -2267,36 +2824,64 @@ ${this.firesExtinguished === this.totalFires ?
         }
         this.ctx.fillRect(displayX + 2, displayY + 2, 4, 4);
 
-        // PTT Button (Push To Talk) - main interaction button
-        const pttX = x + 10;
-        const pttY = y + 45;
-        const pttW = w - 20;
-        const pttH = 25;
+        // Truck3 indicator (right side)
+        if (this.truck3.hasArrived) {
+            this.ctx.fillStyle = '#27ae60'; // Green when truck arrived
+        } else {
+            this.ctx.fillStyle = '#9ACD32'; // Yellow-green when idle
+        }
+        this.ctx.fillRect(displayX + displayW - 6, displayY + 2, 4, 4);
 
-        // Button pressed effect
+        // Two PTT Buttons (Push To Talk) - one for each truck
+        const buttonSpacing = 2;
+        const buttonWidth = (w - 20 - buttonSpacing) / 2;
+        const buttonHeight = 25;
+        const buttonY = y + 45;
+
+        // Button 1 (left) - for truck2 (red truck)
+        const ptt1X = x + 10;
         if (wt.isPttPressed) {
             this.ctx.fillStyle = '#c0392b';
-            this.ctx.fillRect(pttX + 1, pttY + 1, pttW, pttH);
+            this.ctx.fillRect(ptt1X + 1, buttonY + 1, buttonWidth, buttonHeight);
         } else {
             // Button shadow
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            this.ctx.fillRect(pttX + 2, pttY + 2, pttW, pttH);
+            this.ctx.fillRect(ptt1X + 2, buttonY + 2, buttonWidth, buttonHeight);
 
             // Button face
-            this.ctx.fillStyle = wt.isHovered ? '#e67e22' : '#e74c3c';
-            this.ctx.fillRect(pttX, pttY, pttW, pttH);
+            this.ctx.fillStyle = wt.button1Hovered ? '#e67e22' : '#e74c3c';
+            this.ctx.fillRect(ptt1X, buttonY, buttonWidth, buttonHeight);
         }
-
         // Button border
         this.ctx.strokeStyle = '#c0392b';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(pttX, pttY, pttW, pttH);
+        this.ctx.strokeRect(ptt1X, buttonY, buttonWidth, buttonHeight);
 
-        // PTT label on button
+        // Button 2 (right) - for truck3 (yellow-green truck)
+        const ptt2X = ptt1X + buttonWidth + buttonSpacing;
+        if (wt.isPttPressed2) {
+            this.ctx.fillStyle = '#7BA428';
+            this.ctx.fillRect(ptt2X + 1, buttonY + 1, buttonWidth, buttonHeight);
+        } else {
+            // Button shadow
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            this.ctx.fillRect(ptt2X + 2, buttonY + 2, buttonWidth, buttonHeight);
+
+            // Button face
+            this.ctx.fillStyle = wt.button2Hovered ? '#B8E356' : '#9ACD32';
+            this.ctx.fillRect(ptt2X, buttonY, buttonWidth, buttonHeight);
+        }
+        // Button border
+        this.ctx.strokeStyle = '#7BA428';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(ptt2X, buttonY, buttonWidth, buttonHeight);
+
+        // Labels on buttons
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 10px Arial';
+        this.ctx.font = 'bold 8px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('PTT', x + w / 2, pttY + 16);
+        this.ctx.fillText('T2', ptt1X + buttonWidth / 2, buttonY + 16);
+        this.ctx.fillText('T3', ptt2X + buttonWidth / 2, buttonY + 16);
 
         // Side clips/details
         this.ctx.fillStyle = '#1c2833';
