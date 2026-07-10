@@ -9,12 +9,18 @@
 ## 🎮 Play Now
 
 ### 🌐 Play Online
-**[Play Live on GitHub Pages →](https://ennywnad.github.io/firefighters/)**
+Three ways to play — all live on GitHub Pages:
+
+- **[▶ Classic (v1) →](https://ennywnad.github.io/firefighters/)** — the original step-by-step fire-rescue game
+- **[▶ Arcade (v2) →](https://ennywnad.github.io/firefighters/v2/)** — 16-bit Rampage-style city block ([about](v2/README.md))
+- **[▶ Painted (v3) →](https://ennywnad.github.io/firefighters/v3/)** — smooth painted cartoon look, same gameplay ([about](v3/README.md))
+
+You can also hop between versions with the small `v1 · v2 · v3` switcher at the bottom of each page.
 
 ### 💻 Play Locally
-Simply open `index.html` in your browser to start playing! No installation required.
+Open `index.html` (v1), `v2/index.html`, or `v3/index.html` in your browser — no build step, no installation required.
 
-**Note:** An internet connection is required for external dependencies (Tailwind CSS, Google Fonts, Tone.js).
+**Note:** The classic game (v1) uses external dependencies (Tailwind CSS, Google Fonts, Tone.js) and needs an internet connection. The v2/v3 remakes are self-contained (the only network fetch is a display font, and they work without it).
 
 ## 🌟 Features
 
@@ -110,6 +116,7 @@ No build process required - it's that simple!
 
 ## 📝 Version History
 
+- **Arcade remakes** - 🕹️ **NEW VISUAL VERSIONS** — added two ground-up Rampage-inspired remakes alongside the classic game: **v2 (Arcade)** with a 16-bit pixel look and **v3 (Painted)** with a smooth painted cartoon look. Both are self-contained (no build step) and share the same city-block gameplay. A `v1 · v2 · v3` switcher on each page lets players jump between them.
 - **v1.3.0** (Current) - 🎨 **CUSTOMIZATION & ADVANCED GAMEPLAY**
   - Added truck and hydrant style customization (Classic/Detailed, Classic/Modern)
   - Implemented fun gameplay modifiers (double spray, fire spreading, emergency lights)
