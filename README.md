@@ -13,7 +13,7 @@ Three ways to play — all live on GitHub Pages:
 
 - **[▶ Classic (v1) →](https://ennywnad.github.io/firefighters/)** — the original step-by-step fire-rescue game
 - **[▶ Arcade (v2) →](https://ennywnad.github.io/firefighters/v2/)** — 16-bit Rampage-style city block ([about](v2/README.md))
-- **[▶ Painted (v3) →](https://ennywnad.github.io/firefighters/v3/)** — smooth painted cartoon look, same gameplay ([about](v3/README.md))
+- **[▶ Painted (v3) →](https://ennywnad.github.io/firefighters/v3/)** — the most featureful version: painted cartoon look, wide 4-building city, backup ladder trucks, rescues, and wet surfaces ([about](v3/README.md))
 
 You can also hop between versions with the small `v1 · v2 · v3` switcher at the bottom of each page.
 
@@ -24,7 +24,19 @@ Open `index.html` (v1), `v2/index.html`, or `v3/index.html` in your browser — 
 
 ## 🌟 Features
 
-### 🔥 Fire Rescue Level
+### 🖼️ Painted City (v3 highlights)
+
+The newest version turns the block into a living scene:
+- **Wide 4-building city** - A panoramic dusk skyline with four buildings that can catch fire
+- **Walkie-Talkie Backup** - Two buttons call two backup ladder trucks that roll in with lights flashing
+- **Crews That Do the Needful** - One tap and a firefighter hops out, hooks the hose to the hydrant, drops the outriggers, and raises the ladder
+- **Auto Cannons + Manual Aim** - Deployed crews soak fires and handle rescues on their own; when idle, their cannons follow your pointer and spray along with you
+- **Ladder Rescues** - Trapped neighbors wave from upper windows with a HELP bubble; any ladder can bring them down for a star
+- **First-Floor Rules** - No ladders to the first floor: a firefighter walks over and sprays from the street
+- **Meeting Point** - Nobody is ever shown in a burning window; evacuees gather on the sidewalk and hop with joy when their building is safe
+- **Wet Everything** - Water soaks the walls it actually hits, dribbles down the brick, pools into street puddles, and leaves a glossy sheen on trucks caught in the spray
+
+### 🔥 Fire Rescue Level (v1 classic)
 
 Experience realistic firefighting action:
 - **Truck Entrance Animation** - Watch the fire truck drive onto the scene with flashing emergency lights
@@ -116,6 +128,7 @@ No build process required - it's that simple!
 
 ## 📝 Version History
 
+- **v3 city expansion** - 🚒 **BACKUP TRUCKS, RESCUES & WET SURFACES** — widened the painted city to four buildings; added a walkie-talkie that dispatches two backup ladder trucks with self-deploying crews; ladder rescues of trapped neighbors with a sidewalk meeting point for evacuees (nobody is ever shown in a burning window); firefighters go on foot for first-floor fires; idle cannons follow the pointer and spray with the player; and a rebuilt wet-surface system that soaks walls, pools puddles on the street, and puts a glossy sheen on sprayed trucks. Also gave v1 proper iPad/touch support (pointer events, `100dvh`, `touch-action: none`).
 - **Arcade remakes** - 🕹️ **NEW VISUAL VERSIONS** — added two ground-up Rampage-inspired remakes alongside the classic game: **v2 (Arcade)** with a 16-bit pixel look and **v3 (Painted)** with a smooth painted cartoon look. Both are self-contained (no build step) and share the same city-block gameplay. A `v1 · v2 · v3` switcher on each page lets players jump between them.
 - **v1.3.0** (Current) - 🎨 **CUSTOMIZATION & ADVANCED GAMEPLAY**
   - Added truck and hydrant style customization (Classic/Detailed, Classic/Modern)

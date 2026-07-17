@@ -22,8 +22,19 @@ FF.truck = (function () {
         targetAngle: -Math.PI / 2,
         targetLen: 30,
         crewOut: false,
-        cheerT: 0
+        cheerT: 0,
+        wetT: 0,
+        gx: 0,          // ground-crew firefighter position (bottom-row fires)
+        gdir: 1
     };
+
+    function isGroundFloor(win) {
+        return win && win.row === FF.scene.buildings[win.b].floors - 1;
+    }
+
+    function gunnerStandX(win) {
+        return win.x + win.w / 2 - 14;
+    }
 
     function pivot() {
         return { x: t.x + 16, y: GROUND - 24 };
@@ -61,6 +72,11 @@ FF.truck = (function () {
             t.stateT = 0;
             t.cheerT = 1400;
             if (FF.audio) FF.audio.sprayStop();
+        } else if (t.state === 'GSPRAY') {
+            t.state = 'WALKBACK';
+            t.stateT = 0;
+            t.cheerT = 1400;
+            if (FF.audio) FF.audio.sprayStop();
         }
     }
 
@@ -82,6 +98,7 @@ FF.truck = (function () {
         const step = dt / 16.67;
         t.stateT += dt;
         t.lightT += dt;
+        if (t.wetT > 0) t.wetT -= dt;
 
         switch (t.state) {
             case 'DRIVING': {
@@ -104,6 +121,10 @@ FF.truck = (function () {
                 if (t.stateT > 700) {
                     if (t.parkMode) {
                         t.state = 'STAGED';
+                    } else if (isGroundFloor(t.target)) {
+                        // no ladder for the first floor — a firefighter walks over
+                        t.gx = t.x + 58;
+                        t.state = 'WALK';
                     } else {
                         computeLadderGoal();
                         t.state = 'RAISE';
@@ -111,6 +132,60 @@ FF.truck = (function () {
                     t.stateT = 0;
                 }
                 break;
+            case 'WALK': {
+                const win = t.target;
+                if (!win || win.state !== 'fire') { t.state = 'WALKBACK'; t.stateT = 0; break; }
+                const sx = gunnerStandX(win);
+                const d = sx - t.gx;
+                const sp = 0.9 * step;
+                if (Math.abs(d) <= sp) {
+                    t.gx = sx;
+                    t.state = 'GSPRAY';
+                    t.stateT = 0;
+                    if (FF.audio) FF.audio.sprayStart();
+                } else {
+                    t.gdir = Math.sign(d);
+                    t.gx += t.gdir * sp;
+                }
+                break;
+            }
+            case 'GSPRAY': {
+                const win = t.target;
+                if (!win || win.state !== 'fire') { finishSpray(); break; }
+                const nx = t.gx + (win.x + win.w / 2 > t.gx + 5 ? 9 : 1);
+                const ny = GROUND - 14 + 7;
+                const g = 0.012;
+                for (let i = 0; i < 3; i++) {
+                    const aimX = win.x + 3 + Math.random() * (win.w - 6);
+                    const aimY = win.y + 2 + Math.random() * (win.h - 4);
+                    const dx = aimX - nx, dy = aimY - ny;
+                    const d = Math.max(6, Math.hypot(dx, dy));
+                    const sp = 1.8 + Math.random() * 0.3;
+                    const tf = d / sp;
+                    FF.particles.spawnDrop(
+                        nx, ny,
+                        dx / tf + (Math.random() - 0.5) * 0.08,
+                        dy / tf - 0.5 * g * tf + (Math.random() - 0.5) * 0.08,
+                        g,
+                        tf * (1.02 + Math.random() * 0.1)
+                    );
+                }
+                break;
+            }
+            case 'WALKBACK': {
+                if (t.cheerT > 0) t.cheerT -= dt;
+                const hx = t.x + 58;
+                const d = hx - t.gx;
+                const sp = 0.9 * step;
+                if (Math.abs(d) <= sp) {
+                    t.state = 'PACK';
+                    t.stateT = 0;
+                } else {
+                    t.gdir = Math.sign(d);
+                    t.gx += t.gdir * sp;
+                }
+                break;
+            }
             case 'RAISE': {
                 const goal = t.targetAngle;
                 t.ladderAngle += (goal - t.ladderAngle) * 0.08 * step;
@@ -128,12 +203,20 @@ FF.truck = (function () {
                     t.ladderLen = t.targetLen;
                     t.state = 'SPRAY';
                     t.stateT = 0;
-                    if (FF.audio) FF.audio.sprayStart();
+                    if (FF.audio && t.target && t.target.state === 'fire') FF.audio.sprayStart();
                 }
                 break;
             case 'SPRAY': {
-                const tip = ladderTip();
                 const win = t.target;
+                // rescue run: hold the ladder at the window while people climb down
+                if (win && win.state === 'help') {
+                    if (t.stateT > 2200 && FF.game && FF.game.onWindowRescued) {
+                        FF.game.onWindowRescued(win);
+                    }
+                    break;
+                }
+                if (!win || win.state !== 'fire') { finishSpray(); break; }
+                const tip = ladderTip();
                 for (let i = 0; i < 3; i++) {
                     const aimX = win.x + 3 + Math.random() * (win.w - 6);
                     const aimY = win.y + 2 + Math.random() * (win.h - 4);
@@ -376,6 +459,27 @@ FF.truck = (function () {
         drawWheel(x, bx + 10);
         drawWheel(x, bx + 32);
         drawWheel(x, bx + 48);
+
+        // glossy sheen when the truck has been sprayed
+        if (t.wetT > 0) {
+            const wa = Math.min(0.3, (t.wetT / 15000) * 0.38);
+            const shg = x.createLinearGradient(0, by - 3, 0, by + BODY_H);
+            shg.addColorStop(0, 'rgba(205,232,255,' + wa.toFixed(3) + ')');
+            shg.addColorStop(0.55, 'rgba(205,232,255,' + (wa * 0.35).toFixed(3) + ')');
+            shg.addColorStop(1, 'rgba(205,232,255,0)');
+            x.fillStyle = shg;
+            rr(x, bx, by - 1, BODY_W, BODY_H + 2, 2); x.fill();
+            // dribbles running off
+            x.strokeStyle = 'rgba(184,230,248,' + (wa * 1.6).toFixed(3) + ')';
+            x.lineWidth = 0.7; x.lineCap = 'round';
+            [12, 27, 44].forEach((dxo, i) => {
+                const dl = 2 + ((Math.floor(t.lightT / 300) + i) % 3);
+                x.beginPath();
+                x.moveTo(bx + dxo, by + BODY_H);
+                x.lineTo(bx + dxo, by + BODY_H + dl);
+                x.stroke();
+            });
+        }
     }
 
     function drawCrew(x) {
@@ -395,11 +499,40 @@ FF.truck = (function () {
 
         if (t.state === 'RAISE' || t.state === 'EXTEND' || t.state === 'SPRAY' || t.state === 'RETRACT') {
             const tip = ladderTip();
-            const spr = t.state === 'SPRAY' ? S.ffSpray : S.ffStand;
+            const rescuing = t.state === 'SPRAY' && t.target && t.target.state === 'help';
+            const spr = (t.state === 'SPRAY' && !rescuing) ? S.ffSpray : S.ffStand;
             x.drawImage(spr, tip.x - 8, tip.y - 9, 10, 14);
+            if (rescuing && t.target.occupant >= 0) {
+                // trapped neighbor stepping onto the ladder
+                x.drawImage(S.people[t.target.occupant], tip.x + 1, tip.y - 6, 7, 7);
+            }
         } else if (t.state === 'DEPLOY') {
             const fr = Math.floor(t.stateT / 140) % 2;
             x.drawImage(fr ? S.ffWalk2 : S.ffWalk1, bx + 20, GROUND - 14, 10, 14);
+        }
+
+        // ground crew handling a first-floor fire on foot
+        if (t.state === 'WALK' || t.state === 'GSPRAY' || t.state === 'WALKBACK') {
+            const gy = GROUND - 14;
+            let spr, flip;
+            if (t.state === 'GSPRAY') {
+                spr = S.ffSpray;
+                flip = t.target && (t.target.x + t.target.w / 2) < t.gx + 5;
+            } else {
+                const fr = Math.floor(t.stateT / 140) % 2;
+                spr = fr ? S.ffWalk1 : S.ffWalk2;
+                flip = t.gdir < 0;
+            }
+            if (flip) {
+                x.save();
+                x.translate(t.gx + 5, 0);
+                x.scale(-1, 1);
+                x.translate(-(t.gx + 5), 0);
+                x.drawImage(spr, t.gx, gy, 10, 14);
+                x.restore();
+            } else {
+                x.drawImage(spr, t.gx, gy, 10, 14);
+            }
         }
     }
 
@@ -418,16 +551,22 @@ FF.truck = (function () {
         t.ladderLen = 10;
         t.crewOut = false;
         t.cheerT = 0;
+        t.wetT = 0;
+    }
+
+    function markWet() {
+        t.wetT = Math.min(15000, t.wetT + 2500);
     }
 
     return {
-        update, draw, dispatch, parkOnly, finishSpray, reset, ladderTip,
+        update, draw, dispatch, parkOnly, finishSpray, reset, ladderTip, markWet,
         get state() { return t.state; },
         get target() { return t.target; },
         get busy() { return t.state !== 'IDLE' && t.state !== 'PACK'; },
         get x() { return t.x; },
         // tap target + hose anchor for steps controls
         get rect() { return { x: t.x - 4, y: GROUND - 34, w: BODY_W + 8, h: 36 }; },
+        get bodyRect() { return { x: t.x, y: GROUND - 8 - BODY_H, w: BODY_W, h: BODY_H + 8 }; },
         get portPoint() { return { x: t.x + 2, y: GROUND - 12 }; }
     };
 })();

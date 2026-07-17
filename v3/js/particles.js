@@ -8,6 +8,7 @@ FF.particles = (function () {
     let steam = [];
     let confetti = [];
     let pops = [];
+    let wets = [];       // lingering wet patches on walls + street puddles
 
     const FIRE_RAMP = [P.fire0, P.fire1, P.fire2, P.fire3, P.fire4];
 
@@ -62,8 +63,72 @@ FF.particles = (function () {
         }
     }
 
-    function spawnDrop(x, y, vx, vy, g) {
-        drops.push({ x, y, vx, vy, life: 1, g: g || 0.04 });
+    const WET_DOT = glowDot('#6d84b8', 0.55);    // multiplied over walls = damp look
+    const SHEEN_DOT = glowDot('#d8eaff', 0.4);   // glisten highlight
+    const PUDDLE_DOT = glowDot('#3a5d94', 0.5);  // pooled water body
+
+    // maxAge (in frames) makes the drop "land" right where it was aimed,
+    // depositing wetness on whatever surface is there — like a real hose.
+    function spawnDrop(x, y, vx, vy, g, maxAge) {
+        drops.push({ x, y, vx, vy, life: 1, g: g || 0.04, age: 0, maxAge: maxAge || 0 });
+    }
+
+    // --- wet surfaces ---
+
+    function overFacade(x, y) {
+        const SW = FF.scene.SIDEWALK_Y;
+        return FF.scene.buildings.some(b =>
+            x >= b.x && x <= b.x + b.w && y >= b.top - 6 && y <= SW
+        );
+    }
+
+    function spawnWet(wx, wy, ground) {
+        // grow a nearby patch instead of stacking new ones
+        for (let i = wets.length - 1; i >= 0; i--) {
+            const p = wets[i];
+            if (p.ground === ground &&
+                Math.abs(p.x - wx) < (ground ? 14 : 10) &&
+                Math.abs(p.y - wy) < (ground ? 5 : 10)) {
+                p.a = Math.min(p.a + 0.07, ground ? 0.75 : 0.7);
+                p.rx = Math.min(p.rx + 0.9, ground ? 26 : 20);
+                if (!ground) p.ry = Math.min(p.ry + 0.7, 18);
+                return;
+            }
+        }
+        wets.push({
+            x: wx, y: wy,
+            rx: ground ? 5 + Math.random() * 3 : 4.5 + Math.random() * 3,
+            ry: ground ? 1.6 + Math.random() * 0.8 : 4 + Math.random() * 2.5,
+            a: ground ? 0.28 : 0.26,
+            ground
+        });
+        if (wets.length > 320) wets.shift();
+    }
+
+    function inRect(x, y, r) {
+        return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    }
+
+    function depositDrop(d) {
+        // trucks first: they get a glossy wet sheen
+        if (FF.truck && inRect(d.x, d.y, FF.truck.bodyRect)) {
+            FF.truck.markWet();
+            hitSteam(d.x, d.y);
+            return;
+        }
+        if (FF.units && FF.units.markWetAt(d.x, d.y)) {
+            hitSteam(d.x, d.y);
+            return;
+        }
+        // sidewalk + street get puddles
+        if (d.y >= FF.scene.SIDEWALK_Y - 2) {
+            spawnWet(d.x, Math.min(d.y, FF.H - 3), true);
+            return;
+        }
+        if (overFacade(d.x, d.y)) {
+            spawnWet(d.x, d.y, false);
+            hitSteam(d.x, d.y);
+        }
     }
 
     function burstSteam(w) {
@@ -115,13 +180,41 @@ FF.particles = (function () {
         });
         flames = flames.filter(f => f.life > 0);
 
-        drops.forEach(d => {
+        drops = drops.filter(d => {
             d.x += d.vx * step;
             d.y += d.vy * step;
             d.vy += d.g * step;
             d.life -= 0.006 * step;
+            d.age += step;
+
+            // landed on the street (or on a truck parked there)?
+            if (d.vy > 0 && d.y >= 198) {
+                depositDrop(d);
+                return false;
+            }
+            // reached where it was aimed, or fizzled out
+            if ((d.maxAge && d.age >= d.maxAge) || d.life <= 0 || d.y >= FF.H) {
+                depositDrop(d);
+                return false;
+            }
+            return true;
         });
-        drops = drops.filter(d => d.life > 0 && d.y < FF.H);
+
+        // wet patches slowly dry (walls dry faster than street puddles)
+        wets = wets.filter(p => {
+            p.a -= dt * (p.ground ? 1 / 90000 : 1 / 55000);
+            // heavy wall patches dribble down and pool on the street
+            if (!p.ground && p.a > 0.3 && drops.length < 380 &&
+                Math.random() < dt * 0.002) {
+                drops.push({
+                    x: p.x + (Math.random() - 0.5) * p.rx,
+                    y: p.y + p.ry,
+                    vx: 0, vy: 0.22, g: 0.008,
+                    life: 0.55, age: 0, maxAge: 0
+                });
+            }
+            return p.a > 0.02;
+        });
 
         steam.forEach(s => {
             s.x += s.vx * step; s.y += s.vy * step;
@@ -152,6 +245,55 @@ FF.particles = (function () {
             i === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
         }
         x.closePath();
+    }
+
+    // wet sheen layer: drawn right after the scene, under trucks and spray
+    function drawWet(x) {
+        if (!wets.length) return;
+        const SW = FF.scene.SIDEWALK_Y;
+
+        // walls: clip to the building facades so damp never bleeds into the sky
+        x.save();
+        x.beginPath();
+        FF.scene.buildings.forEach(b => x.rect(b.x - 1, b.top - 6, b.w + 2, SW - b.top + 6));
+        x.clip();
+        wets.forEach(p => {
+            if (p.ground) return;
+            const al = Math.min(0.75, p.a);
+            x.globalCompositeOperation = 'multiply';
+            x.globalAlpha = al;
+            x.drawImage(WET_DOT, p.x - p.rx, p.y - p.ry, p.rx * 2, p.ry * 2);
+            // run-down streak below the patch
+            x.globalAlpha = al * 0.5;
+            x.drawImage(WET_DOT, p.x - p.rx * 0.35, p.y, p.rx * 0.7, p.ry * 2.6);
+            // glisten
+            x.globalCompositeOperation = 'lighter';
+            x.globalAlpha = al * 0.16;
+            x.drawImage(SHEEN_DOT, p.x - p.rx * 0.5, p.y - p.ry * 0.7, p.rx, p.ry * 0.8);
+        });
+        x.restore();
+
+        // street puddles: flat ellipses with a lamp-light sheen
+        x.save();
+        x.beginPath();
+        x.rect(0, SW, FF.W, FF.H - SW);
+        x.clip();
+        wets.forEach(p => {
+            if (!p.ground) return;
+            const al = Math.min(0.8, p.a);
+            // deep-blue pooled water (clearly readable, like v1's puddles)
+            x.globalCompositeOperation = 'source-over';
+            x.globalAlpha = al * 0.55;
+            x.drawImage(PUDDLE_DOT, p.x - p.rx, p.y - p.ry, p.rx * 2, p.ry * 2);
+            x.globalCompositeOperation = 'multiply';
+            x.globalAlpha = al;
+            x.drawImage(WET_DOT, p.x - p.rx, p.y - p.ry, p.rx * 2, p.ry * 2);
+            x.globalCompositeOperation = 'lighter';
+            x.globalAlpha = al * 0.4;
+            x.drawImage(SHEEN_DOT, p.x - p.rx * 0.8, p.y - p.ry, p.rx * 1.6, p.ry * 1.7);
+        });
+        x.restore();
+        x.globalAlpha = 1;
     }
 
     function draw(x) {
@@ -216,12 +358,13 @@ FF.particles = (function () {
     }
 
     function reset() {
-        flames = []; drops = []; steam = []; confetti = []; pops = [];
+        flames = []; drops = []; steam = []; confetti = []; pops = []; wets = [];
     }
 
     return {
-        spawnFlames, spawnDrop, burstSteam, hitSteam, starPop, celebrateConfetti,
-        update, draw, reset,
-        get drops() { return drops; }
+        spawnFlames, spawnDrop, spawnWet, burstSteam, hitSteam, starPop, celebrateConfetti,
+        update, draw, drawWet, reset,
+        get drops() { return drops; },
+        get wets() { return wets; }
     };
 })();

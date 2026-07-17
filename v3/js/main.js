@@ -92,7 +92,10 @@ window.FF = window.FF || {};
         ctx.save();
         ctx.translate(off.x, off.y);
         FF.scene.draw(ctx, now);
+        FF.particles.drawWet(ctx);
         FF.truck.draw(ctx);
+        FF.game.drawWorld(ctx, now);   // hose + nozzle firefighter (behind backup trucks)
+        FF.units.draw(ctx, now);
         FF.particles.draw(ctx);
         FF.game.draw(ctx, now);
         ctx.restore();
