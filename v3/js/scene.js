@@ -2,7 +2,7 @@
 window.FF = window.FF || {};
 
 FF.W = 512;   // widened city: more buildings + room for backup trucks
-FF.H = 216;
+FF.H = 240;   // extended down to the near sidewalk (the evacuees' meeting spot)
 FF.RES = 4;   // supersample factor for prerendered layers
 
 FF.scene = (function () {
@@ -11,6 +11,7 @@ FF.scene = (function () {
 
     const SIDEWALK_Y = 182;
     const ROAD_Y = 192;
+    const NEAR_WALK_Y = 224;         // near-side sidewalk: the meeting spot
     const HYDRANT_XS = [132, 388];   // left = player's, right = backup trucks'
 
     const BRICKS = {
@@ -419,25 +420,45 @@ FF.scene = (function () {
         });
 
         // road
-        x.fillStyle = lg(x, 0, ROAD_Y, 0, H, [[0, '#41465c'], [1, '#343950']]);
-        x.fillRect(0, ROAD_Y, W, H - ROAD_Y);
+        x.fillStyle = lg(x, 0, ROAD_Y, 0, NEAR_WALK_Y, [[0, '#41465c'], [1, '#343950']]);
+        x.fillRect(0, ROAD_Y, W, NEAR_WALK_Y - ROAD_Y);
         // asphalt mottling
         for (let i = 0; i < 36; i++) {
-            const px = (i * 53) % W, py = ROAD_Y + 3 + (i * 29) % (H - ROAD_Y - 5);
+            const px = (i * 53) % W, py = ROAD_Y + 3 + (i * 29) % (NEAR_WALK_Y - ROAD_Y - 5);
             x.fillStyle = rg(x, px, py, 8, [[0, i % 2 ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.04)'], [1, 'rgba(0,0,0,0)']]);
             x.fillRect(px - 8, py - 8, 16, 16);
         }
         // crosswalk (worn paint)
         x.fillStyle = 'rgba(226,224,204,0.42)';
         for (let sx = 42; sx < 94; sx += 10) {
-            rr(x, sx, ROAD_Y + 3, 5.5, H - ROAD_Y - 6, 1.5); x.fill();
+            rr(x, sx, ROAD_Y + 3, 5.5, NEAR_WALK_Y - ROAD_Y - 6, 1.5); x.fill();
         }
         // lane dashes
         x.fillStyle = 'rgba(201,194,106,0.85)';
         for (let sx = 4; sx < W; sx += 26) {
             if (sx > 20 && sx < 100) continue;
-            rr(x, sx, H - 6.5, 14, 2.4, 1.2); x.fill();
+            rr(x, sx, NEAR_WALK_Y - 8.5, 14, 2.4, 1.2); x.fill();
         }
+
+        // near-side sidewalk: the meeting spot (closer to camera, slightly darker)
+        // near curb
+        x.fillStyle = lg(x, 0, NEAR_WALK_Y - 2.5, 0, NEAR_WALK_Y + 1, [[0, '#2c3042'], [1, '#7e86a2']]);
+        x.fillRect(0, NEAR_WALK_Y - 2.5, W, 3.5);
+        // walk surface
+        x.fillStyle = lg(x, 0, NEAR_WALK_Y + 1, 0, H, [[0, '#5c6280'], [1, '#484e68']]);
+        x.fillRect(0, NEAR_WALK_Y + 1, W, H - NEAR_WALK_Y - 1);
+        x.fillStyle = 'rgba(255,255,255,0.10)';
+        x.fillRect(0, NEAR_WALK_Y + 1, W, 1);
+        // expansion joints (wider apart: closer to camera)
+        x.strokeStyle = 'rgba(40,44,62,0.5)'; x.lineWidth = 0.9;
+        for (let sx = 6; sx < W; sx += 34) {
+            x.beginPath(); x.moveTo(sx, NEAR_WALK_Y + 2); x.lineTo(sx - 3, H); x.stroke();
+        }
+        // warm pools under the streetlamps
+        [8, 296, 468].forEach(lx => {
+            x.fillStyle = rg(x, lx + 1, NEAR_WALK_Y + 8, 26, [[0, 'rgba(255,217,122,0.10)'], [1, 'rgba(255,217,122,0)']]);
+            x.fillRect(lx - 26, NEAR_WALK_Y, 54, H - NEAR_WALK_Y);
+        });
         // manholes
         [[211, 206], [438, 207]].forEach(m => {
             x.fillStyle = '#2e3244';
@@ -701,19 +722,22 @@ FF.scene = (function () {
 
         windows.forEach(w => drawWindowInterior(x, w, t));
 
-        // meeting point: evacuated + rescued people gathered on the sidewalk
+        // meeting point: evacuated + rescued people gathered on the NEAR sidewalk,
+        // safely across the street from their building
         const showPeople = !FF.settings || FF.settings.v.people === 'on';
         if (showPeople) {
             buildings.forEach(b => {
                 if (!b.crowd.length) return;
-                const shown = b.crowd.slice(0, 6);
+                const shown = b.crowd.slice(0, 8);
+                const start = Math.max(2, Math.min(W - shown.length * 9 - 2,
+                    b.x + b.w / 2 - (shown.length * 9) / 2));
                 shown.forEach((idx, i) => {
-                    const px = b.x + 4 + i * 7;
+                    const px = start + i * 9;
                     // little hop of joy once their building is safe
                     const bounce = b.cooldown > 0
-                        ? Math.abs(Math.sin(t * 0.008 + i * 1.3)) * 2 : 0;
+                        ? Math.abs(Math.sin(t * 0.008 + i * 1.3)) * 2.5 : 0;
                     x.drawImage(FF.sprites.people[idx % FF.sprites.people.length],
-                        px, SIDEWALK_Y + 1 - bounce, 8, 8);
+                        px, NEAR_WALK_Y + 4 - bounce, 10, 10);
                 });
             });
         }
@@ -727,7 +751,7 @@ FF.scene = (function () {
         init, update, draw, neighbors,
         get windows() { return windows; },
         get buildings() { return buildings; },
-        SIDEWALK_Y, ROAD_Y,
+        SIDEWALK_Y, ROAD_Y, NEAR_WALK_Y,
         HYDRANT: { x: 130, y: SIDEWALK_Y - 13, w: 14, h: 15 },
         HYDRANTS: HYDRANT_XS.map(hx => ({ x: hx - 2, y: SIDEWALK_Y - 13, w: 14, h: 15, cx: hx + 5 }))
     };
