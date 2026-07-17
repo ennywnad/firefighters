@@ -5,6 +5,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height — accounts for mobile browser toolbars (iPad included) */
     margin: 0;
     overflow: hidden;
     /* Disable text selection and touch callouts for better mobile experience */
@@ -49,8 +50,8 @@ canvas {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    /* Smooth touch interactions */
-    touch-action: manipulation;
+    /* Disable browser touch gestures so drags reach the game (aiming/spraying) */
+    touch-action: none;
 }
 .hidden {
     display: none !important;

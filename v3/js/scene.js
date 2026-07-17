@@ -1,7 +1,7 @@
 // --- Scene (painted): dusk sky, city skyline, block of buildings, street ---
 window.FF = window.FF || {};
 
-FF.W = 384;
+FF.W = 512;   // widened city: more buildings + room for backup trucks
 FF.H = 216;
 FF.RES = 4;   // supersample factor for prerendered layers
 
@@ -11,6 +11,7 @@ FF.scene = (function () {
 
     const SIDEWALK_Y = 182;
     const ROAD_Y = 192;
+    const HYDRANT_XS = [132, 388];   // left = player's, right = backup trucks'
 
     const BRICKS = {
         red:   { base: '#9a4f3a', dark: '#7c3c2c', light: '#b06048' },
@@ -23,7 +24,8 @@ FF.scene = (function () {
     const DEFS = [
         { x: 20,  w: 108, cols: 3, floors: 3, top: 84, brick: 'tan',   roof: 'chimney' },
         { x: 142, w: 150, cols: 4, floors: 5, top: 30, brick: 'red',   roof: 'tank' },
-        { x: 302, w: 76,  cols: 2, floors: 4, top: 56, brick: 'slate', roof: 'antenna' }
+        { x: 302, w: 76,  cols: 2, floors: 4, top: 56, brick: 'slate', roof: 'antenna' },
+        { x: 392, w: 104, cols: 3, floors: 4, top: 44, brick: 'tan',   roof: 'tank' }
     ];
 
     let buildings = [];
@@ -71,6 +73,7 @@ FF.scene = (function () {
                 cols: d.cols, floors: d.floors,
                 cooldown: 0,
                 badgeT: Math.random() * 1000,
+                crowd: [],           // evacuated + rescued people at the meeting point
                 windows: []
             };
 
@@ -140,13 +143,14 @@ FF.scene = (function () {
         x.fillStyle = '#3b3f7c';
         const farH = [38, 55, 30, 62, 44, 58, 34, 50];
         let fx = 0;
-        farH.forEach((h, i) => {
+        for (let i = 0; fx < W + 10; i++) {
+            const h = farH[i % farH.length];
             const bw = 34 + ((h * 7) % 22);
             rr(x, fx, SIDEWALK_Y - h - 40, bw, h + 42, 2.5); x.fill();
             if (i % 3 === 0) x.fillRect(fx + 6, SIDEWALK_Y - h - 46, 1.2, 7);
             if (i % 3 === 1) { rr(x, fx + Math.floor(bw / 2) - 4, SIDEWALK_Y - h - 44, 8, 5, 1.5); x.fill(); }
             fx += bw + 6;
-        });
+        }
         // haze veil over far layer
         x.fillStyle = lg(x, 0, SIDEWALK_Y - 90, 0, SIDEWALK_Y, [[0, 'rgba(240,176,74,0)'], [1, 'rgba(240,176,74,0.16)']]);
         x.fillRect(0, SIDEWALK_Y - 90, W, 90);
@@ -156,7 +160,8 @@ FF.scene = (function () {
         const nearH = [70, 92, 60, 104, 78, 96];
         let nx = -10;
         const nearRects = [];
-        nearH.forEach((h, i) => {
+        for (let i = 0; nx < W + 10; i++) {
+            const h = nearH[i % nearH.length];
             const bw = 52 + ((h * 5) % 30);
             rr(x, nx, SIDEWALK_Y - h, bw, h + 4, 2); x.fill();
             nearRects.push({ x: nx, y: SIDEWALK_Y - h, w: bw, h });
@@ -167,7 +172,7 @@ FF.scene = (function () {
                 rr(x, nx + bw - 22, SIDEWALK_Y - h - 6, 12, 7, 1.5); x.fill();
             }
             nx += bw + 10;
-        });
+        }
         x.save();
         x.shadowColor = 'rgba(244,200,106,0.9)';
         x.shadowBlur = 3 * RES;
@@ -417,7 +422,7 @@ FF.scene = (function () {
         x.fillStyle = lg(x, 0, ROAD_Y, 0, H, [[0, '#41465c'], [1, '#343950']]);
         x.fillRect(0, ROAD_Y, W, H - ROAD_Y);
         // asphalt mottling
-        for (let i = 0; i < 26; i++) {
+        for (let i = 0; i < 36; i++) {
             const px = (i * 53) % W, py = ROAD_Y + 3 + (i * 29) % (H - ROAD_Y - 5);
             x.fillStyle = rg(x, px, py, 8, [[0, i % 2 ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.04)'], [1, 'rgba(0,0,0,0)']]);
             x.fillRect(px - 8, py - 8, 16, 16);
@@ -433,11 +438,13 @@ FF.scene = (function () {
             if (sx > 20 && sx < 100) continue;
             rr(x, sx, H - 6.5, 14, 2.4, 1.2); x.fill();
         }
-        // manhole
-        x.fillStyle = '#2e3244';
-        x.beginPath(); x.ellipse(211, 206, 5.5, 2.2, 0, 0, Math.PI * 2); x.fill();
-        x.strokeStyle = 'rgba(255,255,255,0.14)'; x.lineWidth = 0.7;
-        x.beginPath(); x.ellipse(211, 205.6, 4.6, 1.7, 0, 0, Math.PI * 2); x.stroke();
+        // manholes
+        [[211, 206], [438, 207]].forEach(m => {
+            x.fillStyle = '#2e3244';
+            x.beginPath(); x.ellipse(m[0], m[1], 5.5, 2.2, 0, 0, Math.PI * 2); x.fill();
+            x.strokeStyle = 'rgba(255,255,255,0.14)'; x.lineWidth = 0.7;
+            x.beginPath(); x.ellipse(m[0], m[1] - 0.4, 4.6, 1.7, 0, 0, Math.PI * 2); x.stroke();
+        });
         // storm drain
         x.fillStyle = '#262a3a';
         rr(x, 252, ROAD_Y - 0.5, 16, 3.5, 1.5); x.fill();
@@ -447,9 +454,14 @@ FF.scene = (function () {
         // streetlamps
         drawLamp(x, 8);
         drawLamp(x, 296);
+        drawLamp(x, 468);
 
-        // hydrant
-        const hx = 132, hy = SIDEWALK_Y - 11;
+        // hydrants
+        HYDRANT_XS.forEach(hx => drawHydrant(x, hx));
+    }
+
+    function drawHydrant(x, hx) {
+        const hy = SIDEWALK_Y - 11;
         x.fillStyle = rg(x, hx + 5, SIDEWALK_Y + 1, 8, [[0, 'rgba(0,0,0,0.30)'], [1, 'rgba(0,0,0,0)']]);
         x.beginPath(); x.ellipse(hx + 5, SIDEWALK_Y + 0.5, 7, 2, 0, 0, Math.PI * 2); x.fill();
         x.fillStyle = P.hydDark;
@@ -556,16 +568,26 @@ FF.scene = (function () {
             x.fillRect(w.x, w.y, w.w, w.h);
         }
 
-        if (showPeople && w.occupant >= 0) {
-            const spr = FF.sprites.people[w.occupant];
-            const px = w.x + Math.floor(w.w / 2) - 4;
-            const py = w.y + w.h - 8;
-            x.drawImage(spr, px, py, 8, 8);
-            if (w.state === 'fire') {
+        // rule: nobody is ever shown in a burning window
+        if (showPeople && w.occupant >= 0 && w.state !== 'fire') {
+            if (w.state === 'help') {
+                // trapped neighbors waving for the big ladder
+                const px1 = w.x + Math.floor(w.w / 2) - 8;
+                const px2 = w.x + Math.floor(w.w / 2) + 1;
+                const py = w.y + w.h - 8;
+                x.drawImage(FF.sprites.people[w.occupant], px1, py, 8, 8);
+                if (w.helper2 !== undefined) {
+                    x.drawImage(FF.sprites.people[w.helper2], px2, py, 8, 8);
+                }
                 const up = Math.floor(w.waveT * 6) % 2 === 0;
                 x.fillStyle = P.skin;
-                rr(x, px - 2, up ? py - 2 : py + 1, 1.8, 4, 0.9); x.fill();
-                rr(x, px + 8.2, up ? py + 1 : py - 2, 1.8, 4, 0.9); x.fill();
+                rr(x, px1 - 2, up ? py - 2 : py + 1, 1.8, 4, 0.9); x.fill();
+                rr(x, px2 + 8.2, up ? py + 1 : py - 2, 1.8, 4, 0.9); x.fill();
+            } else {
+                const spr = FF.sprites.people[w.occupant];
+                const px = w.x + Math.floor(w.w / 2) - 4;
+                const py = w.y + w.h - 8;
+                x.drawImage(spr, px, py, 8, 8);
             }
         }
 
@@ -581,6 +603,20 @@ FF.scene = (function () {
             x.fillStyle = rg(x, w.x + w.w / 2, w.y + w.h / 2, w.w * 1.3,
                 [[0, 'rgba(255,150,51,' + a.toFixed(3) + ')'], [1, 'rgba(255,150,51,0)']]);
             x.fillRect(w.x - w.w, w.y - w.w, w.w * 3, w.h + w.w * 2);
+        }
+
+        // HELP! bubble over trapped people
+        if (w.state === 'help') {
+            const bob = Math.sin(w.waveT * 3) * 1.2;
+            const bx = w.x + w.w - 1, by = w.y - 7 + bob;
+            x.fillStyle = 'rgba(255,255,255,0.95)';
+            rr(x, bx - 4, by - 4, 8.5, 8, 3); x.fill();
+            x.beginPath();
+            x.moveTo(bx - 1, by + 3.6); x.lineTo(bx + 2.5, by + 3.6); x.lineTo(bx + 0.5, by + 6.5);
+            x.closePath(); x.fill();
+            x.fillStyle = '#d83a34';
+            rr(x, bx - 0.6, by - 2.4, 1.4, 3.4, 0.7); x.fill();
+            x.beginPath(); x.arc(bx + 0.1, by + 2.4, 0.8, 0, Math.PI * 2); x.fill();
         }
 
         if (w.sparkleT > 0) {
@@ -665,6 +701,23 @@ FF.scene = (function () {
 
         windows.forEach(w => drawWindowInterior(x, w, t));
 
+        // meeting point: evacuated + rescued people gathered on the sidewalk
+        const showPeople = !FF.settings || FF.settings.v.people === 'on';
+        if (showPeople) {
+            buildings.forEach(b => {
+                if (!b.crowd.length) return;
+                const shown = b.crowd.slice(0, 6);
+                shown.forEach((idx, i) => {
+                    const px = b.x + 4 + i * 7;
+                    // little hop of joy once their building is safe
+                    const bounce = b.cooldown > 0
+                        ? Math.abs(Math.sin(t * 0.008 + i * 1.3)) * 2 : 0;
+                    x.drawImage(FF.sprites.people[idx % FF.sprites.people.length],
+                        px, SIDEWALK_Y + 1 - bounce, 8, 8);
+                });
+            });
+        }
+
         buildings.forEach(b => {
             if (b.cooldown > 0) drawSafeBadge(x, b);
         });
@@ -675,6 +728,7 @@ FF.scene = (function () {
         get windows() { return windows; },
         get buildings() { return buildings; },
         SIDEWALK_Y, ROAD_Y,
-        HYDRANT: { x: 130, y: SIDEWALK_Y - 13, w: 14, h: 15 }
+        HYDRANT: { x: 130, y: SIDEWALK_Y - 13, w: 14, h: 15 },
+        HYDRANTS: HYDRANT_XS.map(hx => ({ x: hx - 2, y: SIDEWALK_Y - 13, w: 14, h: 15, cx: hx + 5 }))
     };
 })();

@@ -295,9 +295,11 @@ class FireRescueLevel {
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        window.addEventListener('mouseup', () => this.handleMouseUp());
+        // Pointer events unify mouse and touch (touch alone never fires mousemove/mousedown drags on iPad)
+        this.canvas.addEventListener('pointermove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('pointerdown', (e) => this.handlePointerDown(e));
+        window.addEventListener('pointerup', () => this.handleMouseUp());
+        window.addEventListener('pointercancel', () => this.handleMouseUp());
 
         // Developer mode keyboard shortcut (Ctrl+Shift+D)
         window.addEventListener('keydown', (e) => {
@@ -1512,6 +1514,17 @@ class FireRescueLevel {
         if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
             this.updateNozzleAngle();
         }
+    }
+
+    handlePointerDown(e) {
+        // Touch has no hover: aim the nozzle at the touch point before spraying starts
+        if (!this.truckChanging) {
+            this.mouse = this.getMousePos(e);
+            if (this.gameState === 'READY_TO_SPRAY' || this.gameState === 'SPRAYING') {
+                this.updateNozzleAngle();
+            }
+        }
+        this.handleMouseDown(e);
     }
 
     handleMouseDown(e) {
