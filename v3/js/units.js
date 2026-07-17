@@ -65,7 +65,7 @@ FF.units = (function () {
         trucks[0] = mkTruck(2, -1, SCHEMES.red, 420);
         trucks[1] = mkTruck(3, 1, SCHEMES.green, 252);
         walkie.x = FF.W - 30;
-        walkie.y = FF.H - 38;
+        walkie.y = FF.H - 34;   // resting on the near sidewalk
         walkie.press = [0, 0];
         hintT = 6000;
         needBackup = false;
@@ -838,7 +838,7 @@ FF.units = (function () {
 
     function drawWalkie(x, t) {
         const wt = walkie;
-        if (!wt.x) { wt.x = FF.W - 30; wt.y = FF.H - 38; }
+        if (!wt.x) { wt.x = FF.W - 30; wt.y = FF.H - 34; }
 
         // pulsing ring when backup is really needed (fires piling up / rescue waiting)
         if (needBackup) {
