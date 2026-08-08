@@ -36,11 +36,91 @@ html, body {
     background: radial-gradient(ellipse at 50% 42%, transparent 64%, rgba(6, 8, 26, 0.30) 100%);
 }
 
-#instruction {
+/* top-centre cluster: the fire truck badge + the instruction pill */
+#topbar {
     position: absolute;
     top: 3%;
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    /* leaves the stars and the sound/gear buttons their corners */
+    max-width: 72%;
+    z-index: 2;
+}
+
+#version-btn {
+    flex: none;
+    pointer-events: auto;
+    font-size: clamp(15px, 3.2vw, 30px);
+    line-height: 1;
+    background: linear-gradient(rgba(40, 43, 96, 0.92), rgba(20, 22, 58, 0.92));
+    border: 3px solid #f4c84a;
+    border-radius: 50%;
+    width: 1.9em; height: 1.9em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.22);
+    cursor: pointer;
+    padding: 0;
+}
+
+#version-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+
+/* a little drive-and-honk wiggle when tapped */
+#version-btn.honk { animation: honk 0.5s ease-in-out; }
+
+@keyframes honk {
+    0%   { transform: translateX(0) rotate(0); }
+    25%  { transform: translateX(5px) rotate(-7deg); }
+    55%  { transform: translateX(-4px) rotate(6deg); }
+    80%  { transform: translateX(2px) rotate(-3deg); }
+    100% { transform: translateX(0) rotate(0); }
+}
+
+/* hangs off the bottom of the truck badge, however tall the pill grows */
+#version-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.4em;
+    pointer-events: auto;
+    display: flex;
+    gap: 0.5em;
+    padding: 0.4em 0.5em;
+    background: linear-gradient(rgba(40, 43, 96, 0.96), rgba(20, 22, 58, 0.96));
+    border: 3px solid #f4c84a;
+    border-radius: 999px;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
+    z-index: 3;
+}
+
+#version-menu.hidden { display: none; }
+
+#version-menu a, #version-menu span {
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(13px, 2.6vw, 22px);
+    line-height: 1;
+    text-decoration: none;
+    color: #fff6da;
+    background: #232759;
+    border: 2px solid #4a3b8c;
+    border-radius: 999px;
+    padding: 0.4em 0.9em;
+    min-width: 2.6em;
+    text-align: center;
+}
+
+#version-menu span[aria-current] {
+    color: #1c1f4e;
+    background: linear-gradient(#ffe9a0, #ffd97a);
+    border-color: #fff6da;
+}
+
+#instruction {
     color: #fff6da;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -48,11 +128,14 @@ html, body {
     border: 3px solid #f4c84a;
     border-radius: 999px;
     box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.22);
-    padding: 0.45em 1.4em;
-    font-size: clamp(13px, 2.8vw, 26px);
+    padding: 0.45em 1.2em;
+    font-size: clamp(12px, 2.5vw, 24px);
+    line-height: 1.15;
     text-align: center;
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
-    white-space: nowrap;
+    /* long hints wrap to a second line instead of shoving the badge aside */
+    overflow: hidden;
+    min-width: 0;
     transition: opacity 0.3s;
     z-index: 1;
 }
@@ -114,8 +197,17 @@ html, body {
     border-radius: 22px;
     box-shadow: 0 10px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.18);
     padding: 2.2vh 2.5vw;
-    max-height: 90vh;
+    max-height: 92vh;
+    max-width: 96vw;
+    display: flex;
+    flex-direction: column;
+}
+
+/* only the option rows scroll, so the tabs and DONE stay put */
+#settings-rows {
     overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 #settings-box h2 {
@@ -127,6 +219,35 @@ html, body {
     margin-bottom: 1.4vh;
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
 }
+
+#settings-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.6vw;
+    margin-bottom: 1.4vh;
+}
+
+.set-tab {
+    font-family: inherit;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-size: clamp(11px, 2vw, 17px);
+    color: #b8c0d8;
+    background: #232759;
+    border: 2px solid #4a3b8c;
+    border-radius: 999px;
+    padding: 0.4em 1.2em;
+    cursor: pointer;
+}
+
+.set-tab.sel {
+    color: #1c1f4e;
+    background: linear-gradient(#ffe9a0, #ffd97a);
+    border-color: #fff6da;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.set-page.hidden { display: none; }
 
 .set-row {
     display: flex;
@@ -167,6 +288,7 @@ html, body {
 
 #settings-close {
     display: block;
+    flex: none;
     margin: 1.8vh auto 0;
     font-family: inherit;
     font-weight: 800;

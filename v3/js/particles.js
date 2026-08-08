@@ -9,6 +9,7 @@ FF.particles = (function () {
     let confetti = [];
     let pops = [];
     let wets = [];       // lingering wet patches on walls + street puddles
+    let weather = [];    // rain streaks / snowflakes
 
     const FIRE_RAMP = [P.fire0, P.fire1, P.fire2, P.fire3, P.fire4];
 
@@ -171,8 +172,84 @@ FF.particles = (function () {
         }
     }
 
+    // --- WEATHER: rain streaks or drifting snow across the whole block ---
+
+    function weatherKind() {
+        const v = FF.settings && FF.settings.v.weather;
+        return v === 'rain' || v === 'snow' ? v : 'clear';
+    }
+
+    function spawnWeather(kind) {
+        if (kind === 'rain') {
+            weather.push({
+                kind, x: Math.random() * (FF.W + 40) - 20, y: -6,
+                vx: 0.5, vy: 5 + Math.random() * 2.5,
+                len: 4 + Math.random() * 4, a: 0.25 + Math.random() * 0.3
+            });
+        } else {
+            weather.push({
+                kind, x: Math.random() * FF.W, y: -4,
+                vx: (Math.random() - 0.5) * 0.3, vy: 0.35 + Math.random() * 0.4,
+                r: 0.5 + Math.random() * 0.9, sway: Math.random() * Math.PI * 2,
+                a: 0.5 + Math.random() * 0.5
+            });
+        }
+    }
+
+    function updateWeather(dt, step) {
+        const kind = weatherKind();
+        if (kind === 'clear') {
+            if (weather.length) weather = [];
+            return;
+        }
+        if (weather.length && weather[0].kind !== kind) weather = [];
+
+        const want = kind === 'rain' ? 150 : 90;
+        const spawn = Math.min(kind === 'rain' ? 7 : 3, want - weather.length);
+        for (let i = 0; i < spawn; i++) spawnWeather(kind);
+
+        weather = weather.filter(p => {
+            if (p.kind === 'snow') {
+                p.sway += dt * 0.002;
+                p.x += (p.vx + Math.sin(p.sway) * 0.25) * step;
+            } else {
+                p.x += p.vx * step;
+            }
+            p.y += p.vy * step;
+            return p.y < FF.H + 4;
+        });
+    }
+
+    function drawWeather(x) {
+        if (!weather.length) return;
+        x.save();
+        if (weather[0].kind === 'rain') {
+            x.strokeStyle = P.water1;
+            x.lineWidth = 0.55;
+            x.lineCap = 'round';
+            weather.forEach(p => {
+                x.globalAlpha = p.a;
+                x.beginPath();
+                x.moveTo(p.x, p.y);
+                x.lineTo(p.x - p.vx * (p.len / p.vy), p.y - p.len);
+                x.stroke();
+            });
+        } else {
+            x.fillStyle = '#f4f8ff';
+            weather.forEach(p => {
+                x.globalAlpha = p.a * 0.9;
+                x.beginPath();
+                x.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                x.fill();
+            });
+        }
+        x.restore();
+        x.globalAlpha = 1;
+    }
+
     function update(dt, t) {
         const step = dt / 16.67;
+        updateWeather(dt, step);
 
         flames.forEach(f => {
             f.x += f.vx * step; f.y += f.vy * step;
@@ -317,17 +394,19 @@ FF.particles = (function () {
         });
         x.globalAlpha = 1;
 
-        // water: droplets with velocity streaks
+        // water: droplets with velocity streaks (2X SPRAY makes them fat)
+        const big = FF.settings && FF.settings.v.bigSpray === 'on' ? 2 : 1;
         x.lineCap = 'round';
         drops.forEach(d => {
             x.globalAlpha = Math.max(0.25, Math.min(1, d.life));
             x.strokeStyle = d.life > 0.5 ? P.water1 : P.water2;
-            x.lineWidth = 0.9;
+            x.lineWidth = 0.9 * big;
             x.beginPath();
             x.moveTo(d.x - d.vx * 3, d.y - d.vy * 3);
             x.lineTo(d.x, d.y);
             x.stroke();
-            x.drawImage(WATER_DOT, d.x - 1.6, d.y - 1.6, 3.2, 3.2);
+            const s = 1.6 * big;
+            x.drawImage(WATER_DOT, d.x - s, d.y - s, s * 2, s * 2);
         });
         x.globalAlpha = 1;
 
@@ -359,11 +438,12 @@ FF.particles = (function () {
 
     function reset() {
         flames = []; drops = []; steam = []; confetti = []; pops = []; wets = [];
+        weather = [];
     }
 
     return {
         spawnFlames, spawnDrop, spawnWet, burstSteam, hitSteam, starPop, celebrateConfetti,
-        update, draw, drawWet, reset,
+        update, draw, drawWet, drawWeather, reset,
         get drops() { return drops; },
         get wets() { return wets; }
     };

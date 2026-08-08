@@ -94,18 +94,38 @@ FF.audio = (function () {
         for (let i = 0; i < 6; i++) beep(300 + i * 60, 0.04, 'square', 0.06, i * 0.09);
     }
 
+    // WATER SOUND: the hose hiss, from bright spray to a deep rumble
+    const WATER_TONES = {
+        default: { type: 'bandpass', freq: 900, q: 0.7,  gain: 0.10 },
+        deeper:  { type: 'bandpass', freq: 480, q: 0.9,  gain: 0.11 },
+        rumbly:  { type: 'lowpass',  freq: 260, q: 0.8,  gain: 0.16 }
+    };
+
+    function waterTone() {
+        const v = FF.settings && FF.settings.v.waterSound;
+        if (v === 'off') return null;
+        return WATER_TONES[v] || WATER_TONES.default;
+    }
+
     function sprayStart() {
-        if (!ensure() || sprayNode) return;
+        const tone = waterTone();
+        if (!tone || !ensure() || sprayNode) return;
         const src = ctx.createBufferSource();
         src.buffer = noiseBuf;
         src.loop = true;
         const f = ctx.createBiquadFilter();
-        f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.7;
+        f.type = tone.type; f.frequency.value = tone.freq; f.Q.value = tone.q;
         const g = ctx.createGain();
-        g.gain.value = 0.1;
+        g.gain.value = tone.gain;
         src.connect(f); f.connect(g); g.connect(master);
         src.start();
         sprayNode = { src, g };
+    }
+
+    // two-tone truck horn for the version badge
+    function horn() {
+        beep(392, 0.18, 'sawtooth', 0.10);
+        beep(294, 0.26, 'sawtooth', 0.10, 0.16);
     }
 
     function sprayStop() {
@@ -132,7 +152,7 @@ FF.audio = (function () {
     }
 
     return {
-        ensure, setMuted, tap, sirenStart, sirenStop, airBrake,
+        ensure, setMuted, tap, sirenStart, sirenStop, airBrake, horn,
         ratchet, sprayStart, sprayStop, saveChime, fanfare, stopAll,
         get muted() { return muted; }
     };
