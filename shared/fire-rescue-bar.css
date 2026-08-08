@@ -1,0 +1,339 @@
+/* ---------------------------------------------------------------------------
+   Shared across v1 / v2 / v3: the clickable fire-truck badge (does a lap around
+   the screen), the version picker that appears when you hover or tap it, and
+   the arcade title intro that plays when you arrive from another version.
+   --------------------------------------------------------------------------- */
+
+/* the titles are attached to <html> and cover everything; this just keeps the
+   backdrop dark if the page paints before they are up */
+html.frb-booting { background: #080a1e; }
+
+/* --- the truck badge in the header ------------------------------------- */
+
+.frb-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 30;
+}
+
+/* the badge v2 / v3 get (v1 keeps its own 🚒 in the title bar) */
+.frb-badge {
+    font-size: clamp(15px, 3.2vw, 30px);
+    line-height: 1;
+    width: 1.9em;
+    height: 1.9em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: linear-gradient(rgba(40, 43, 96, 0.92), rgba(20, 22, 58, 0.92));
+    border: 3px solid #f4c84a;
+    border-radius: 50%;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.22);
+    cursor: pointer;
+}
+
+.frb-wrap:hover .frb-badge { transform: scale(1.06); }
+.frb-wrap:active .frb-badge { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+
+/* --- the lap: off the left edge, back in from the right ----------------- */
+
+.frb-rider {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* !important because v1's own header truck already carries an animation */
+.frb-rider.frb-lap { animation: frb-lap 1.9s cubic-bezier(0.4, 0.05, 0.5, 0.98) both !important; }
+
+@keyframes frb-lap {
+      0% { transform: translateX(0) translateY(0) rotate(0); }
+      7% { transform: translateX(9%) translateY(0) rotate(3deg); }      /* wind up */
+     14% { transform: translateX(-4%) translateY(-8%) rotate(-4deg); }  /* launch */
+     44% { transform: translateX(-78vw) translateY(0) rotate(-2deg); }  /* gone left */
+   44.1% { transform: translateX(78vw) translateY(0) rotate(-2deg); }   /* back on the right */
+     80% { transform: translateX(-6%) translateY(0) rotate(-3deg); }    /* overshoots home */
+     88% { transform: translateX(4%) translateY(-6%) rotate(2deg); }
+     94% { transform: translateX(-2%) translateY(0) rotate(-1deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0); }
+}
+
+/* --- version picker ----------------------------------------------------- */
+
+.frb-versions {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    display: flex;
+    gap: 0.4em;
+    margin-top: 0.35em;
+    padding: 0.35em 0.4em;
+    background: linear-gradient(rgba(40, 43, 96, 0.96), rgba(20, 22, 58, 0.96));
+    border: 3px solid #f4c84a;
+    border-radius: 999px;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.92);
+    transform-origin: top center;
+    pointer-events: none;
+    transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+    white-space: nowrap;
+}
+
+.frb-wrap.frb-open .frb-versions {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    pointer-events: auto;
+}
+
+.frb-v {
+    display: block;
+    font-family: 'Bangers', 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
+    font-size: clamp(13px, 2.5vw, 22px);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.05;
+    text-align: center;
+    text-decoration: none;
+    color: #fff6da;
+    background: #232759;
+    border: 2px solid #4a3b8c;
+    border-radius: 999px;
+    padding: 0.35em 0.75em;
+    min-width: 2.8em;
+    cursor: pointer;
+}
+
+.frb-v small {
+    display: block;
+    font-size: 0.5em;
+    letter-spacing: 0.12em;
+    opacity: 0.72;
+    font-family: system-ui, sans-serif;
+    font-weight: 700;
+}
+
+.frb-v:hover { background: #33397a; border-color: #f4c84a; }
+
+.frb-v.frb-cur {
+    color: #1c1f4e;
+    background: linear-gradient(#ffe9a0, #ffd97a);
+    border-color: #fff6da;
+}
+
+/* --- the fade used on the way out --------------------------------------- */
+
+.frb-veil {
+    position: fixed;
+    inset: 0;
+    background: #080a1e;
+    opacity: 0;
+    transition: opacity 0.32s ease-in;
+    z-index: 99998;
+    pointer-events: none;
+}
+
+.frb-veil.frb-on { opacity: 1; }
+
+/* --- the arcade title intro --------------------------------------------- */
+
+.frb-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 45%, #14183c 0%, #080a1e 70%);
+    cursor: pointer;
+}
+
+.frb-intro.frb-out { animation: frb-intro-out 0.85s ease-out both; }
+
+@keyframes frb-intro-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+.frb-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5vw;
+    padding: 0 3vw;
+}
+
+.frb-stage.frb-hit { animation: frb-shake 0.42s ease-out both; }
+
+@keyframes frb-shake {
+      0% { transform: translate(0, 0); }
+     12% { transform: translate(-1.1%, 1.4%); }
+     26% { transform: translate(1%, -1%); }
+     42% { transform: translate(-0.7%, -0.5%); }
+     60% { transform: translate(0.5%, 0.6%); }
+     80% { transform: translate(-0.25%, 0); }
+    100% { transform: translate(0, 0); }
+}
+
+/* truck rushes in from the left, thumps the title, rocks back into place */
+.frb-intro-truck {
+    width: min(36vw, 50vh);
+    flex: none;
+    animation: frb-truck-in 1.75s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+    transform-origin: 50% 85%;
+    filter: drop-shadow(0 1.4vh 1.2vh rgba(0, 0, 0, 0.55));
+}
+
+@keyframes frb-truck-in {
+      0% { transform: translateX(-78vw) rotate(-7deg) scale(1.06); }
+     34% { transform: translateX(3.2vw) rotate(2deg) scale(1.06); }        /* contact */
+     39% { transform: translateX(2vw) scaleX(0.84) scaleY(1.14) rotate(-1deg); }
+     48% { transform: translateX(-4.5vw) rotate(-5deg) scale(1); }         /* bounces off */
+     62% { transform: translateX(1.6vw) rotate(2deg) scale(1); }
+     76% { transform: translateX(-0.7vw) rotate(-1deg) scale(1); }
+     88% { transform: translateX(0.25vw) rotate(0.4deg) scale(1); }
+    100% { transform: translateX(0) rotate(0) scale(1); }
+}
+
+/* the header emoji faces left; for the titles the truck charges to the right,
+   so it hits the logo nose-first */
+.frb-truck-art { width: 100%; height: auto; display: block; transform: scaleX(-1); }
+
+.frb-intro-title { animation: frb-title-in 1.75s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+
+@keyframes frb-title-in {
+      0% { transform: translateX(78vw) rotate(6deg) scale(1.06); }
+     34% { transform: translateX(-3.2vw) rotate(-2deg) scale(1.06); }
+     39% { transform: translateX(-2vw) scaleX(0.86) scaleY(1.12) rotate(1deg); }
+     48% { transform: translateX(4.5vw) rotate(4deg) scale(1); }
+     62% { transform: translateX(-1.6vw) rotate(-1.6deg) scale(1); }
+     76% { transform: translateX(0.7vw) rotate(0.8deg) scale(1); }
+     88% { transform: translateX(-0.25vw) rotate(-0.3deg) scale(1); }
+    100% { transform: translateX(0) rotate(0) scale(1); }
+}
+
+.frb-tilt {
+    transform: perspective(900px) rotateX(9deg) rotateY(-8deg) rotate(-2.5deg);
+    transform-style: preserve-3d;
+}
+
+.frb-3d {
+    position: relative;
+    display: block;
+    font-family: 'Bangers', 'Baloo 2', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    line-height: 0.92;
+    text-align: right;
+    white-space: nowrap;
+    color: #ffcf3f;
+    -webkit-text-stroke: clamp(1px, 0.4vw, 5px) #6e1512;
+    text-shadow:
+        0.004em 0.012em 0 #d99a1c, 0.008em 0.024em 0 #c98814, 0.012em 0.036em 0 #ba7810,
+        0.016em 0.048em 0 #a9660c, 0.020em 0.060em 0 #985609, 0.024em 0.072em 0 #874707,
+        0.028em 0.084em 0 #743a05, 0.032em 0.096em 0 #612d03, 0.036em 0.108em 0 #4e2202,
+        0.04em 0.13em 0.14em rgba(0, 0, 0, 0.55);
+}
+
+/* glossy top-lit copy laid exactly over the extruded one */
+.frb-3d::before {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #fffbe6 0%, #ffeeb0 34%, #ffc93f 52%, #f5a318 62%, #ffe9a0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0;
+    text-shadow: none;
+}
+
+.frb-line1 { font-size: clamp(34px, 8.5vw, 118px); }
+.frb-line2 { font-size: clamp(42px, 10.4vw, 140px); margin-top: -0.06em; }
+
+/* version caption that drops in once the bounce settles */
+.frb-sub {
+    margin-top: 0.5em;
+    text-align: right;
+    font-family: 'Bangers', 'Baloo 2', system-ui, sans-serif;
+    font-size: clamp(11px, 2.1vw, 26px);
+    letter-spacing: 0.34em;
+    color: #ffe9a0;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    animation: frb-sub-in 0.5s ease-out 1.35s both;
+}
+
+@keyframes frb-sub-in {
+    from { opacity: 0; transform: translateY(0.6em); letter-spacing: 0.5em; }
+    to   { opacity: 1; transform: translateY(0); letter-spacing: 0.34em; }
+}
+
+/* impact flash + shockwave at the moment they meet */
+.frb-flash {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 46vw;
+    height: 46vw;
+    margin: -23vw 0 0 -23vw;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 246, 214, 0.85) 0%, rgba(255, 208, 90, 0.35) 38%, rgba(255, 208, 90, 0) 70%);
+    opacity: 0;
+    pointer-events: none;
+    animation: frb-flash 0.5s ease-out 0.585s both;
+}
+
+@keyframes frb-flash {
+      0% { opacity: 0; transform: scale(0.5); }
+     12% { opacity: 0.9; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.35); }
+}
+
+.frb-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12vw;
+    height: 12vw;
+    margin: -6vw 0 0 -6vw;
+    border: 0.5vw solid rgba(255, 234, 170, 0.85);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    animation: frb-ring 0.62s cubic-bezier(0.1, 0.7, 0.3, 1) 0.585s both;
+}
+
+@keyframes frb-ring {
+      0% { opacity: 0.9; transform: scale(0.3); }
+    100% { opacity: 0; transform: scale(3.4); }
+}
+
+.frb-skip {
+    position: absolute;
+    bottom: 5%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font: 600 clamp(9px, 1.4vw, 14px)/1 system-ui, sans-serif;
+    letter-spacing: 0.2em;
+    color: rgba(255, 246, 218, 0.45);
+    opacity: 0;
+    animation: frb-sub-in 0.4s ease-out 1.6s both;
+}
+
+/* people who would rather not be bounced at */
+@media (prefers-reduced-motion: reduce) {
+    .frb-rider.frb-lap { animation: none !important; }
+    .frb-intro-truck, .frb-intro-title { animation: frb-calm-in 0.5s ease-out both; }
+    .frb-flash, .frb-ring, .frb-stage.frb-hit { animation: none; }
+    @keyframes frb-calm-in { from { opacity: 0; } to { opacity: 1; } }
+}

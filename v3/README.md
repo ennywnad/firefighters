@@ -39,7 +39,7 @@ and walks to the hydrant, hooks up the supply hose, the outriggers drop, and the
 ladder comes off the rack. Tapping a deployed truck packs the ladder; tapping
 again redeploys (the hose stays connected). Works in both control modes.
 
-Who works the ladder is up to you — **BACKUP CREW** in the options:
+Who works the ladder is up to you — **BACKUP LADDERS** in the options:
 
 - **YOU (default):** the ladder follows your finger. Point anywhere and it swings
   and extends to reach; **hold** and the cannon firefighter at the tip soaks
@@ -51,10 +51,21 @@ Who works the ladder is up to you — **BACKUP CREW** in the options:
 
 ## Switching versions (the fire truck badge)
 
-The v1 / v2 / v3 links used to sit on the very edge of the screen, which is a
-poor touch target. They now live behind the **🚒 badge in the upper middle**,
-next to the instruction pill: tap it and the truck honks and wiggles, and three
-big pill buttons drop down underneath. Tap anywhere else to put them away.
+The v1 / v2 / v3 links no longer sit on the screen edge. A fire truck badge sits in
+the upper middle, beside the instruction pill, and it is shared with v1 and v2
+(see [`shared/`](../shared/)):
+
+- **Click the truck** — it honks, zooms off the left edge, wraps around and drives
+  back to the middle. Pure easter egg.
+- **Hover it (or tap it on a touch screen)** — `v1 · v2 · v3` drops down underneath,
+  each labelled with what it is: CLASSIC, ARCADE, PAINTED.
+- **Pick one** — the screen dips to black, and the version you land on opens with
+  the arcade titles: the truck charges in from the left, the 3D FIRE RESCUE! logo
+  from the right, they bounce off each other, settle with the version name, and the
+  game fades up out of the dark. Tap to skip.
+
+TITLE INTRO in OPTIONS → EXTRA controls when the titles play: when switching
+versions (default), every single launch, or never.
 
 ## Wet surfaces
 
@@ -73,7 +84,8 @@ sidewalk in front of their building (and hops with joy when it goes safe).
 Sometimes neighbors get **trapped**: a couple of people appear at a nearby
 window waving with a HELP bubble and a glowing ring. Any ladder can rescue
 them — rest a backup ladder tip on their window yourself (or let the crew do it
-with BACKUP CREW = auto), and in tap mode you can tap the window to send truck 1.
+with BACKUP LADDERS = crew drives), and in tap mode you can tap the window to send
+truck 1.
 Rescues earn a star, and a building can't go
 "safe" while someone is still trapped. When backup is needed (a rescue waiting,
 or 2+ fires) the walkie-talkie pulses and the HUD calls it out.
@@ -81,47 +93,58 @@ or 2+ fires) the walkie-talkie pulses and the HUD calls it out.
 ## Options menu (⚙️ button)
 
 Everything persists in localStorage (key `firefighterV3Settings`) and applies
-live; the game pauses while the menu is open. The options are split across three
+live; the game pauses while the menu is open. The options are split across four
 tabs so they stay thumb-sized.
 
-### PLAY
+Each row in the menu carries a plain-English line saying what it actually changes,
+so nothing depends on guessing what a value means.
+
+### PLAY — how the game behaves
 
 | Setting | Options | What it does |
 |---|---|---|
-| CONTROLS | steps / tap | v1-style step sequence + aim, or one-tap auto |
-| BACKUP CREW | you / auto | you work the backup ladders, or the crew does |
-| STARS TO WIN | 5 / 8 / 12 | round length |
-| NEW FIRES | chill / normal / busy | how often fires appear (10s / 6s / 3s) |
-| FIRES AT ONCE | 1 / 2 / 3 | max simultaneous fires |
-| FIRE SPREAD | off / slow / fast | fires jump to adjacent windows (14s / 7s) |
-| WATER POWER | gentle / strong | how long spraying takes |
-| SAFE TIME | short / medium / long | building cooldown (10s / 25s / 60s) |
-| PEOPLE TO SAVE | rare / some / lots | how often neighbors get trapped, and how many at once |
-| TRUCK SPEED | slow / normal / fast | how fast the trucks drive in |
-| TAP SIZE | normal / big / huge | grows every hit area at once, for smaller fingers |
+| CONTROLS | set up + aim / one tap | tap truck then hydrant and hold to aim the hose, or tap a fire and the crew does the rest |
+| BACKUP LADDERS | you drive / crew drives | who works ladder trucks 2 and 3 once they are set up |
+| STARS TO WIN | 5 / 8 / 12 | fires out plus rescues before the confetti |
+| NEW FIRES | chill / normal / busy | how long until the next window lights: 10s / 6s / 3s |
+| FIRES AT ONCE | 1 / 2 / 3 | most windows burning at the same time |
+| FIRE SPREAD | never / slow / fast | fire jumps next door after 14s / 7s |
+| WATER POWER | gentle / strong | how fast your spray puts a fire out |
+| SAFE TIME | short / medium / long | how long a cleared building stays fireproof: 10s / 25s / 60s |
+| RESCUES | rare / some / lots | how often neighbours get trapped and need a ladder |
+| TRUCK SPEED | slow / normal / fast | how quickly trucks drive in |
+| TAP SIZE | normal / big / huge | how much space around a target still counts as tapping it |
 
-### LOOKS
+### LOOKS — what you see
 
 | Setting | Options | What it does |
 |---|---|---|
-| PEOPLE | on / off | occupants in windows |
-| PETS | on / off | the family cat on the sill (and at the meeting point) |
-| TIME OF DAY | dusk / night / day | repaints the sky, skyline, moon/sun and streetlamps |
-| WEATHER | clear / rain / snow | rain streaks or drifting snow over the block |
-| TRUCK | classic / detailed | plain bodywork, or chevrons, gear doors and pinstripes |
-| TRUCK 1/2/3 COLOR | red / lime / blue / orange | paint jobs for the engine and both ladders (v1 parity) |
-| HYDRANT | classic / modern | brass pumper cap, or squarer chrome-and-red |
-| WINDOW LIGHTS | still / slow / normal | how often flats flick their lights on and off |
-| EMERGENCY | off / on | beacons keep rolling even when the trucks are parked |
-| 2X SPRAY | off / on | fat water droplets |
+| PEOPLE IN WINDOWS | on / off | neighbours at their windows and at the meeting point |
+| PETS | on / off | a cat on the sill, carried out with the family |
+| TIME OF DAY | dusk / night / day | sky, skyline, moon or sun, streetlamps |
+| WEATHER | clear / rain / snow | falling weather over the block (looks only) |
+| TRUCK DETAIL | plain / fancy | chevrons, gear doors and pinstripes on every truck |
+| ENGINE COLOR | red / lime / blue / orange | paint for truck 1 |
+| LADDER 2 / LADDER 3 COLOR | red / lime / blue / orange | paint for each backup truck, matching its walkie-talkie button |
+| HYDRANT | classic / modern | brass pumper, or chrome and red |
+| HOUSE LIGHTS | never / slow / normal | how often windows flick their lights |
+| TRUCK BEACONS | when driving / always on | whether roof lights keep flashing while parked |
+| WATER DROPS | normal / big | droplet size — looks only, WATER POWER is the one that matters |
 
 ### SOUND
 
 | Setting | Options | What it does |
 |---|---|---|
-| WATER SOUND | default / deeper / rumbly / off | hose hiss, from bright spray to a low rumble |
-| VOICE | off / on | reads the on-screen instruction out loud (speech synthesis) |
-| DEBUG | off / on | fps, particle count, unit states and hit boxes on screen |
+| HOSE SOUND | bright / deep / rumbly / off | the hiss while spraying (the speaker button mutes everything) |
+| VOICE | off / on | reads the instruction at the top out loud |
+
+### EXTRA
+
+| Setting | Options | What it does |
+|---|---|---|
+| TITLE INTRO | when switching / every time / off | the truck-and-logo titles |
+| DEBUG | off / on | frame rate, unit states and tap areas on screen |
+| START OVER | reset | puts every option back to its default |
 
 ## Growing with the player
 
@@ -139,7 +162,8 @@ painted look.
 | File | Owns |
 |---|---|
 | `js/sprites.js` | palette + string-map pixel sprites (firefighters, occupants) |
-| `js/settings.js` | options schema, localStorage persistence, tabbed menu UI |
+| `js/settings.js` | options schema (labels, help text, defaults), persistence, tabbed menu UI |
+| `../shared/fire-rescue-bar.*` | truck badge, version picker and arcade titles, shared with v1 and v2 |
 | `js/voice.js` | optional spoken instructions (speech synthesis, off by default) |
 | `js/scene.js` | sky, skyline, 4-building block, window grids + states, street, hydrants |
 | `js/particles.js` | flames, water drops, steam, confetti, star pops, wet surfaces |

@@ -5,18 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Firefighter Game</title>
+    <!-- first in the head on purpose: the shared title sequence has to be on
+         screen before any third-party font or script can hold the page up -->
+    <link rel="stylesheet" href="shared/fire-rescue-bar.css">
+    <script src="shared/fire-rescue-bar.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-    <nav class="version-switcher" aria-label="Game version"
-         style="position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;gap:6px;font:12px/1 system-ui,sans-serif;background:rgba(0,0,0,.45);padding:4px 8px;border-radius:999px;opacity:.85">
-      <span aria-current="page" style="color:#ffd54a;font-weight:700;padding:2px 6px">v1</span>
-      <a href="v2/" style="color:#fff;text-decoration:none;padding:2px 6px">v2</a>
-      <a href="v3/" style="color:#fff;text-decoration:none;padding:2px 6px">v3</a>
-    </nav>
 
     <div id="game-container">
     <!-- Options Menu -->

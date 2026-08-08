@@ -58,38 +58,12 @@ window.FF = window.FF || {};
         FF.game.reset();
     });
 
-    // fire truck badge in the upper middle: honks, then offers v1 / v2 / v3.
-    // (It replaces the old switcher that sat right on the screen edge.)
-    const versionBtn = document.getElementById('version-btn');
-    const versionMenu = document.getElementById('version-menu');
-
-    function showVersions(open) {
-        versionMenu.classList.toggle('hidden', !open);
-        versionBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-
-    versionBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const open = versionMenu.classList.contains('hidden');
-        showVersions(open);
-        if (open) {
-            FF.audio.ensure();
-            FF.audio.horn();
-            versionBtn.classList.remove('honk');
-            void versionBtn.offsetWidth;      // restart the wiggle
-            versionBtn.classList.add('honk');
-        }
-    });
-    versionBtn.addEventListener('animationend', () => versionBtn.classList.remove('honk'));
-
-    // tapping anywhere else puts the menu away
-    ['pointerdown', 'click'].forEach(ev =>
-        document.addEventListener(ev, (e) => {
-            if (versionMenu.classList.contains('hidden')) return;
-            if (versionMenu.contains(e.target) || e.target === versionBtn) return;
-            showVersions(false);
-        })
-    );
+    // the fire truck badge in the upper middle (shared with v1 and v2):
+    // click it for a lap around the screen, hover/tap it to pick a version
+    const versionBar = window.FireRescueBar &&
+        FireRescueBar.mount({ into: document.getElementById('topbar'), first: true });
+    // TITLE INTRO lives in the options menu but is owned by the shared bar
+    if (window.FireRescueBar) FireRescueBar.setIntroMode(FF.settings.v.intro);
 
     // settings menu: pause while open, resume sounds on close
     let paused = false;
@@ -97,7 +71,7 @@ window.FF = window.FF || {};
     FF.settings.onOpenChange = (open) => {
         paused = open;
         if (open) {
-            showVersions(false);
+            if (versionBar) versionBar.close();
             FF.game.pointerUp();
             FF.audio.stopAll();
             if (FF.voice) FF.voice.stop();

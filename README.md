@@ -15,7 +15,15 @@ Three ways to play — all live on GitHub Pages:
 - **[▶ Arcade (v2) →](https://ennywnad.github.io/firefighters/v2/)** — 16-bit Rampage-style city block ([about](v2/README.md))
 - **[▶ Painted (v3) →](https://ennywnad.github.io/firefighters/v3/)** — the most featureful version: painted cartoon look, wide 4-building city, backup ladder trucks, rescues, and wet surfaces ([about](v3/README.md))
 
-You can also hop between versions with the small `v1 · v2 · v3` switcher at the bottom of each page.
+Every version carries the same fire truck badge in the middle of its header. **Click the truck** and it
+zooms off the left edge, wraps around and drives back to the middle; **hover or tap it** and the
+`v1 · v2 · v3` picker drops down underneath. Choosing one dips to black and the version you land on
+opens with the arcade titles — the truck and the FIRE RESCUE! logo charge in from opposite sides, thump
+into each other, settle, and the game fades up out of the dark. (Tap to skip; v3 can turn the titles off
+or run them every launch under OPTIONS → EXTRA → TITLE INTRO.)
+
+That header, the picker and the titles live in [`shared/`](shared/) so all three versions stay in step;
+`shared/intro-preview.html` plays the title sequence on its own.
 
 ### 💻 Play Locally
 Open `index.html` (v1), `v2/index.html`, or `v3/index.html` in your browser — no build step, no installation required.

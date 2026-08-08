@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Firefighter Adventures — Painted</title>
+<!-- first in the head on purpose: the shared title sequence has to be on screen
+     before any third-party font can hold the page up -->
+<link rel="stylesheet" href="../shared/fire-rescue-bar.css">
+<script src="../shared/fire-rescue-bar.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Bangers&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,13 +18,7 @@
 
     <div id="hud">
         <div id="topbar">
-            <button id="version-btn" aria-label="Switch game version" aria-expanded="false">&#128658;</button>
             <div id="instruction">TAP THE FIRE!</div>
-            <nav id="version-menu" class="hidden" aria-label="Game version">
-                <a href="../">v1</a>
-                <a href="../v2/">v2</a>
-                <span aria-current="page">v3</span>
-            </nav>
         </div>
         <div id="stars"></div>
         <button id="mute" aria-label="Sound on/off">&#128266;</button>
