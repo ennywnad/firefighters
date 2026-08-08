@@ -22,6 +22,29 @@ FF.scene = (function () {
 
     const CURTAINS = ['#c46a5a', '#5a8a6a', '#5a7aa0'];
 
+    // TIME OF DAY: seven-stop sky ramps (top -> horizon) plus the haze tint
+    // that ties the skyline into the street.
+    const SKIES = {
+        dusk:  [P.sky0, P.sky1, P.sky2, P.sky3, P.sky4, P.sky5, P.sky6],
+        night: ['#05071c', '#0b0e30', '#141845', '#1f2358', '#2b2f6c', '#3a3c7e', '#4a4a8e'],
+        day:   ['#2f8fd6', '#4aa3e2', '#68b7ec', '#8ccbf4', '#b2dcf7', '#d6ebf2', '#f0e8c8']
+    };
+    const HAZES = {
+        dusk:  'rgba(240,176,74,',
+        night: 'rgba(126,146,224,',
+        day:   'rgba(255,244,206,'
+    };
+    const SKYLINE = {
+        dusk:  { far: '#3b3f7c', near: '#242759', win: 1 },
+        night: { far: '#252a5e', near: '#161a3e', win: 1 },
+        day:   { far: '#8ea6c6', near: '#6d84a8', win: 0.28 }
+    };
+
+    function timeOfDay() {
+        const v = FF.settings && FF.settings.v.timeOfDay;
+        return SKIES[v] ? v : 'dusk';
+    }
+
     const DEFS = [
         { x: 20,  w: 108, cols: 3, floors: 3, top: 84, brick: 'tan',   roof: 'chimney' },
         { x: 142, w: 150, cols: 4, floors: 5, top: 30, brick: 'red',   roof: 'tank' },
@@ -94,7 +117,11 @@ FF.scene = (function () {
                         sparkleT: 0,
                         soot: false,
                         deco: Math.random() < 0.3 ? 1 + Math.floor(Math.random() * CURTAINS.length) : 0,
-                        flower: Math.random() < 0.25
+                        flower: Math.random() < 0.25,
+                        // a quarter of the flats flick their lights on and off
+                        dyn: Math.random() < 0.25,
+                        nextLight: 6000 + Math.random() * 24000,
+                        pet: Math.random() < 0.22
                     };
                     b.windows.push(win);
                     windows.push(win);
@@ -116,32 +143,44 @@ FF.scene = (function () {
         const x = skyCanvas.getContext('2d');
         x.scale(RES, RES);
 
-        // dusk gradient
+        const tod = timeOfDay();
+        const sky = SKIES[tod];
+        const haze = HAZES[tod];
+
+        // sky gradient
         x.fillStyle = lg(x, 0, 0, 0, SIDEWALK_Y, [
-            [0, P.sky0], [0.18, P.sky1], [0.34, P.sky2], [0.5, P.sky3],
-            [0.66, P.sky4], [0.82, P.sky5], [1, P.sky6]
+            [0, sky[0]], [0.18, sky[1]], [0.34, sky[2]], [0.5, sky[3]],
+            [0.66, sky[4]], [0.82, sky[5]], [1, sky[6]]
         ]);
         x.fillRect(0, 0, W, SIDEWALK_Y + 2);
 
-        // moon with layered halo + craters
         const mx = 53, my = 27;
-        x.fillStyle = rg(x, mx, my, 30, [[0, 'rgba(244,236,208,0.30)'], [0.4, 'rgba(244,236,208,0.10)'], [1, 'rgba(244,236,208,0)']]);
-        x.fillRect(mx - 30, my - 30, 60, 60);
-        x.fillStyle = rg(x, mx - 2, my - 3, 9, [[0, '#fffbe8'], [0.7, '#f4ecd0'], [1, '#e2d8b6']]);
-        x.beginPath(); x.arc(mx, my, 8.5, 0, Math.PI * 2); x.fill();
-        x.fillStyle = 'rgba(190,180,150,0.5)';
-        [[mx - 2.5, my + 0.5, 1.7], [mx + 3, my + 3.5, 1.1], [mx + 2, my - 3.5, 1.3]].forEach(c => {
-            x.beginPath(); x.arc(c[0], c[1], c[2], 0, Math.PI * 2); x.fill();
-        });
+        if (tod === 'day') {
+            // sun with a wide warm halo
+            x.fillStyle = rg(x, mx, my, 42, [[0, 'rgba(255,244,190,0.55)'], [0.35, 'rgba(255,236,160,0.20)'], [1, 'rgba(255,236,160,0)']]);
+            x.fillRect(mx - 42, my - 42, 84, 84);
+            x.fillStyle = rg(x, mx, my, 9.5, [[0, '#fffdf0'], [0.65, '#fff2b0'], [1, '#ffd97a']]);
+            x.beginPath(); x.arc(mx, my, 9, 0, Math.PI * 2); x.fill();
+        } else {
+            // moon with layered halo + craters
+            x.fillStyle = rg(x, mx, my, 30, [[0, 'rgba(244,236,208,0.30)'], [0.4, 'rgba(244,236,208,0.10)'], [1, 'rgba(244,236,208,0)']]);
+            x.fillRect(mx - 30, my - 30, 60, 60);
+            x.fillStyle = rg(x, mx - 2, my - 3, 9, [[0, '#fffbe8'], [0.7, '#f4ecd0'], [1, '#e2d8b6']]);
+            x.beginPath(); x.arc(mx, my, 8.5, 0, Math.PI * 2); x.fill();
+            x.fillStyle = 'rgba(190,180,150,0.5)';
+            [[mx - 2.5, my + 0.5, 1.7], [mx + 3, my + 3.5, 1.1], [mx + 2, my - 3.5, 1.3]].forEach(c => {
+                x.beginPath(); x.arc(c[0], c[1], c[2], 0, Math.PI * 2); x.fill();
+            });
+        }
 
         // static painterly cloud banks
-        x.fillStyle = 'rgba(226,204,226,0.10)';
+        x.fillStyle = tod === 'day' ? 'rgba(255,255,255,0.42)' : 'rgba(226,204,226,0.10)';
         [[110, 46, 34, 6], [150, 42, 26, 5], [250, 26, 40, 7], [290, 30, 26, 5], [40, 62, 30, 5]].forEach(c => {
             x.beginPath(); x.ellipse(c[0], c[1], c[2], c[3], 0, 0, Math.PI * 2); x.fill();
         });
 
         // far skyline (hazy)
-        x.fillStyle = '#3b3f7c';
+        x.fillStyle = SKYLINE[tod].far;
         const farH = [38, 55, 30, 62, 44, 58, 34, 50];
         let fx = 0;
         for (let i = 0; fx < W + 10; i++) {
@@ -153,11 +192,11 @@ FF.scene = (function () {
             fx += bw + 6;
         }
         // haze veil over far layer
-        x.fillStyle = lg(x, 0, SIDEWALK_Y - 90, 0, SIDEWALK_Y, [[0, 'rgba(240,176,74,0)'], [1, 'rgba(240,176,74,0.16)']]);
+        x.fillStyle = lg(x, 0, SIDEWALK_Y - 90, 0, SIDEWALK_Y, [[0, haze + '0)'], [1, haze + '0.16)']]);
         x.fillRect(0, SIDEWALK_Y - 90, W, 90);
 
         // near skyline with glowing windows
-        x.fillStyle = '#242759';
+        x.fillStyle = SKYLINE[tod].near;
         const nearH = [70, 92, 60, 104, 78, 96];
         let nx = -10;
         const nearRects = [];
@@ -175,6 +214,7 @@ FF.scene = (function () {
             nx += bw + 10;
         }
         x.save();
+        x.globalAlpha = SKYLINE[tod].win;
         x.shadowColor = 'rgba(244,200,106,0.9)';
         x.shadowBlur = 3 * RES;
         x.fillStyle = P.litWin;
@@ -186,7 +226,7 @@ FF.scene = (function () {
             }
         });
         x.restore();
-        x.fillStyle = 'rgba(244,200,106,0.28)';
+        x.fillStyle = 'rgba(244,200,106,' + (0.28 * SKYLINE[tod].win).toFixed(3) + ')';
         nearRects.forEach(r => {
             for (let wy = r.y + 6; wy < SIDEWALK_Y - 8; wy += 9) {
                 for (let wx = r.x + 5; wx < r.x + r.w - 5; wx += 8) {
@@ -196,7 +236,7 @@ FF.scene = (function () {
         });
 
         // warm ground haze
-        x.fillStyle = lg(x, 0, SIDEWALK_Y - 36, 0, SIDEWALK_Y, [[0, 'rgba(240,176,74,0)'], [1, 'rgba(240,176,74,0.20)']]);
+        x.fillStyle = lg(x, 0, SIDEWALK_Y - 36, 0, SIDEWALK_Y, [[0, haze + '0)'], [1, haze + '0.20)']]);
         x.fillRect(0, SIDEWALK_Y - 36, W, 36);
     }
 
@@ -375,11 +415,13 @@ FF.scene = (function () {
     function drawLamp(x, lx) {
         const baseY = ROAD_Y - 2;
         const topY = baseY - 40;
+        // the lamps burn low once the sun is up
+        const lit = timeOfDay() === 'day' ? 0.25 : 1;
         // glow
-        x.fillStyle = rg(x, lx + 1, topY + 4, 16, [[0, 'rgba(255,217,122,0.45)'], [0.4, 'rgba(255,217,122,0.15)'], [1, 'rgba(255,217,122,0)']]);
+        x.fillStyle = rg(x, lx + 1, topY + 4, 16, [[0, 'rgba(255,217,122,' + 0.45 * lit + ')'], [0.4, 'rgba(255,217,122,' + 0.15 * lit + ')'], [1, 'rgba(255,217,122,0)']]);
         x.fillRect(lx - 16, topY - 12, 34, 34);
         // light pool
-        x.fillStyle = rg(x, lx + 1, SIDEWALK_Y + 6, 20, [[0, 'rgba(255,217,122,0.20)'], [1, 'rgba(255,217,122,0)']]);
+        x.fillStyle = rg(x, lx + 1, SIDEWALK_Y + 6, 20, [[0, 'rgba(255,217,122,' + 0.20 * lit + ')'], [1, 'rgba(255,217,122,0)']]);
         x.fillRect(lx - 20, SIDEWALK_Y - 6, 42, 24);
         // pole
         x.strokeStyle = '#3a3648'; x.lineWidth = 1.8; x.lineCap = 'round';
@@ -485,6 +527,12 @@ FF.scene = (function () {
         const hy = SIDEWALK_Y - 11;
         x.fillStyle = rg(x, hx + 5, SIDEWALK_Y + 1, 8, [[0, 'rgba(0,0,0,0.30)'], [1, 'rgba(0,0,0,0)']]);
         x.beginPath(); x.ellipse(hx + 5, SIDEWALK_Y + 0.5, 7, 2, 0, 0, Math.PI * 2); x.fill();
+
+        if (FF.settings && FF.settings.v.hydrant === 'modern') {
+            drawModernHydrant(x, hx, hy);
+            return;
+        }
+
         x.fillStyle = P.hydDark;
         rr(x, hx + 0.5, hy + 9, 9, 2.4, 1); x.fill();
         x.fillStyle = lg(x, hx + 2, 0, hx + 8, 0, [[0, '#f4cc5a'], [0.5, P.hyd], [1, P.hydDark]]);
@@ -495,6 +543,31 @@ FF.scene = (function () {
         rr(x, hx + 3, hy + 2, 1.2, 6, 0.6); x.fill();
         x.fillStyle = P.hydDark;
         x.beginPath(); x.arc(hx + 5, hy + 5.5, 1.1, 0, Math.PI * 2); x.fill();
+    }
+
+    // squarer, chrome-and-red city hydrant
+    function drawModernHydrant(x, hx, hy) {
+        // base plate
+        x.fillStyle = P.steelDark;
+        rr(x, hx, hy + 9, 10, 2.6, 0.8); x.fill();
+        // body
+        x.fillStyle = lg(x, hx + 2, 0, hx + 8.5, 0, [[0, '#f06a58'], [0.45, P.red], [1, P.redDark]]);
+        rr(x, hx + 2, hy, 6.5, 10, 1.2); x.fill();
+        // chrome cap
+        x.fillStyle = lg(x, hx + 1, 0, hx + 9, 0, [[0, '#e8ecf4'], [1, P.steelDark]]);
+        rr(x, hx + 1, hy - 2.4, 8.5, 3, 1); x.fill();
+        // side ports
+        x.fillStyle = P.steel;
+        rr(x, hx - 0.6, hy + 3.4, 3, 3, 1); x.fill();
+        rr(x, hx + 7.6, hy + 3.4, 3, 3, 1); x.fill();
+        x.fillStyle = P.hub;
+        x.beginPath(); x.arc(hx + 0.9, hy + 4.9, 0.9, 0, Math.PI * 2); x.fill();
+        x.beginPath(); x.arc(hx + 9.1, hy + 4.9, 0.9, 0, Math.PI * 2); x.fill();
+        // reflective band + highlight
+        x.fillStyle = 'rgba(255,255,255,0.75)';
+        rr(x, hx + 2, hy + 7.4, 6.5, 1.1, 0.5); x.fill();
+        x.fillStyle = 'rgba(255,248,216,0.45)';
+        rr(x, hx + 3, hy + 0.8, 1.1, 5.5, 0.55); x.fill();
     }
 
     function init() {
@@ -523,15 +596,25 @@ FF.scene = (function () {
             c.x += c.s * dt * 0.06;
             if (c.x > W + 40) c.x = -c.w - 20;
         });
+        // WINDOW LIGHTS: 'still' freezes them, otherwise flats flick on and off
+        const lightRate = FF.settings ? FF.settings.num('winLights') : 30000;
         windows.forEach(w => {
             w.waveT += dt * 0.01;
             if (w.sparkleT > 0) w.sparkleT -= dt;
+            if (lightRate && w.dyn && w.state === 'ok') {
+                w.nextLight -= dt;
+                if (w.nextLight <= 0) {
+                    w.lit = !w.lit;
+                    w.nextLight = lightRate + Math.random() * lightRate;
+                }
+            }
         });
         buildings.forEach(b => { b.badgeT += dt; });
     }
 
     function drawWindowInterior(x, w, t) {
         const showPeople = !FF.settings || FF.settings.v.people === 'on';
+        const showPets = !FF.settings || FF.settings.v.pets === 'on';
 
         // lit halo behind everything
         if (w.lit && w.state !== 'fire') {
@@ -612,6 +695,11 @@ FF.scene = (function () {
             }
         }
 
+        // the family cat, curled on the sill next to them
+        if (showPets && showPeople && w.pet && w.occupant >= 0 && w.state !== 'fire') {
+            x.drawImage(FF.sprites.cat, w.x + 0.5, w.y + w.h - 6.5, 6.5, 6.5);
+        }
+
         // cross bars
         x.fillStyle = 'rgba(217,201,168,0.95)';
         x.fillRect(w.x + w.w / 2 - 0.55, w.y, 1.1, w.h);
@@ -683,7 +771,7 @@ FF.scene = (function () {
     function draw(x, t) {
         x.drawImage(skyCanvas, 0, 0, W, H);
 
-        stars.forEach(s => {
+        if (timeOfDay() !== 'day') stars.forEach(s => {
             const tw = Math.sin(t * 0.002 + s.p);
             if (tw > 0.2) {
                 const r = s.big ? 0.9 : 0.55;
@@ -725,19 +813,24 @@ FF.scene = (function () {
         // meeting point: evacuated + rescued people gathered on the NEAR sidewalk,
         // safely across the street from their building
         const showPeople = !FF.settings || FF.settings.v.people === 'on';
+        const showPets = !FF.settings || FF.settings.v.pets === 'on';
         if (showPeople) {
             buildings.forEach(b => {
                 if (!b.crowd.length) return;
-                const shown = b.crowd.slice(0, 8);
+                const shown = b.crowd.filter(m => showPets || !m.cat).slice(0, 8);
                 const start = Math.max(2, Math.min(W - shown.length * 9 - 2,
                     b.x + b.w / 2 - (shown.length * 9) / 2));
-                shown.forEach((idx, i) => {
+                shown.forEach((m, i) => {
                     const px = start + i * 9;
                     // little hop of joy once their building is safe
                     const bounce = b.cooldown > 0
                         ? Math.abs(Math.sin(t * 0.008 + i * 1.3)) * 2.5 : 0;
-                    x.drawImage(FF.sprites.people[idx % FF.sprites.people.length],
-                        px, NEAR_WALK_Y + 4 - bounce, 10, 10);
+                    if (m.cat) {
+                        x.drawImage(FF.sprites.cat, px + 1, NEAR_WALK_Y + 6 - bounce, 8, 8);
+                    } else {
+                        x.drawImage(FF.sprites.people[m.i % FF.sprites.people.length],
+                            px, NEAR_WALK_Y + 4 - bounce, 10, 10);
+                    }
                 });
             });
         }
@@ -747,8 +840,15 @@ FF.scene = (function () {
         });
     }
 
+    // repaint the prerendered layers after a look option changes,
+    // without disturbing the round in progress
+    function refresh() {
+        prerenderSky();
+        prerenderFacades();
+    }
+
     return {
-        init, update, draw, neighbors,
+        init, update, draw, neighbors, refresh,
         get windows() { return windows; },
         get buildings() { return buildings; },
         SIDEWALK_Y, ROAD_Y, NEAR_WALK_Y,

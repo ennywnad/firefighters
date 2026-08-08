@@ -12,6 +12,14 @@ FF.game = (function () {
         SPRAYER_X: 224        // where the nozzle firefighter stands
     };
 
+    // TAP SIZE grows every hit area at once, for smaller fingers
+    function tapPad() {
+        return FF.settings ? FF.settings.num('tapSize') : CONFIG.tapPad;
+    }
+    function stepPad() {
+        return tapPad() + 2;
+    }
+
     let started = false;
     let savedCount = 0;
     let queue = [];           // tap mode: windows waiting for the truck
@@ -25,6 +33,8 @@ FF.game = (function () {
     let phase = 'ARRIVE';     // ARRIVE -> TAP_TRUCK -> TAP_HYDRANT -> READY
     const pointer = { x: 192, y: 110 };
     let spraying = false;
+    let holding = false;      // pointer is down anywhere (drives backup cannons)
+    let fps = 60;
 
     const S = () => FF.settings;
     const mode = () => (S().v.controls === 'tap' ? 'tap' : 'steps');
@@ -51,6 +61,7 @@ FF.game = (function () {
         shakeT = 0;
         flashMsg = null;
         spraying = false;
+        holding = false;
         celebrateEl.classList.add('hidden');
 
         if (mode() === 'steps') {
@@ -93,15 +104,14 @@ FF.game = (function () {
 
         // rule: nobody stays in a burning window — they head to the meeting point
         if (w.occupant >= 0) {
-            b.crowd.push(w.occupant);
-            w.occupant = -1;
+            evacuate(b, w);
         }
 
         // sometimes neighbors get trapped and wave for the big ladder
         if (S().v.people !== 'on') return;
         const helpsGlobal = FF.scene.windows.filter(o => o.state === 'help').length;
         const helpsHere = b.windows.some(o => o.state === 'help');
-        if (!helpsHere && helpsGlobal < 2 && Math.random() < 0.45) {
+        if (!helpsHere && helpsGlobal < S().trappedMax() && Math.random() < S().num('trapped')) {
             // ground-floor folks can walk out the door — only upper floors get trapped
             const cands = b.windows.filter(o =>
                 o.state === 'ok' && o !== w && o.row < b.floors - 1
@@ -119,14 +129,21 @@ FF.game = (function () {
         }
     }
 
+    // move a window's household (and their cat) to the meeting point
+    function evacuate(b, w) {
+        b.crowd.push({ i: w.occupant >= 0 ? w.occupant : 0 });
+        if (w.helper2 !== undefined) b.crowd.push({ i: w.helper2 });
+        if (w.pet) b.crowd.push({ cat: true });
+        w.occupant = -1;
+        w.helper2 = undefined;
+        w.pet = false;
+    }
+
     // a ladder tip reached trapped people — bring them down to the meeting point
     function onWindowRescued(w) {
         if (w.state !== 'help') return;
         const b = FF.scene.buildings[w.b];
-        b.crowd.push(w.occupant >= 0 ? w.occupant : 0);
-        if (w.helper2 !== undefined) b.crowd.push(w.helper2);
-        w.occupant = -1;
-        w.helper2 = undefined;
+        evacuate(b, w);
         w.state = 'ok';
         w.lit = true;
         w.sparkleT = 2000;
@@ -160,6 +177,7 @@ FF.game = (function () {
         if (!started || celebrated) return;
         if (FF.audio) FF.audio.ensure();
         pointer.x = ix; pointer.y = iy;
+        holding = true;
 
         // walkie-talkie + backup trucks get first crack at the tap
         if (FF.units && FF.units.handleTap(ix, iy)) return;
@@ -168,14 +186,14 @@ FF.game = (function () {
 
         switch (phase) {
             case 'TAP_TRUCK':
-                if (inRect(ix, iy, FF.truck.rect, CONFIG.stepPad)) {
+                if (inRect(ix, iy, FF.truck.rect, stepPad())) {
                     if (FF.audio) { FF.audio.tap(); FF.audio.ratchet(); }
                     flash('HOSE CONNECTED! 🚒', 1400);
                     phase = 'TAP_HYDRANT';
                 }
                 break;
             case 'TAP_HYDRANT':
-                if (inRect(ix, iy, FF.scene.HYDRANT, CONFIG.stepPad)) {
+                if (inRect(ix, iy, FF.scene.HYDRANT, stepPad())) {
                     if (FF.audio) { FF.audio.tap(); FF.audio.saveChime(); }
                     flash('WATER ON! 💧', 1400);
                     phase = 'READY';
@@ -183,7 +201,6 @@ FF.game = (function () {
                 break;
             case 'READY':
                 spraying = true;
-                if (FF.audio) FF.audio.sprayStart();
                 break;
         }
     }
@@ -193,16 +210,33 @@ FF.game = (function () {
     }
 
     function pointerUp() {
-        if (spraying && FF.audio) FF.audio.sprayStop();
         spraying = false;
+        holding = false;
+        updateSprayAudio();
     }
 
-    // tap mode: original tier-1 tap-the-fire (or tap trapped people)
+    // one hose sound for both nozzles: the ground crew and the backup cannons
+    let sprayAudioOn = false;
+    function updateSprayAudio() {
+        const on = !celebrated &&
+                   (spraying || (holding && FF.units && FF.units.playerHasLadder()));
+        if (on === sprayAudioOn) return;
+        sprayAudioOn = on;
+        if (!FF.audio) return;
+        if (on) FF.audio.sprayStart(); else FF.audio.sprayStop();
+    }
+
+    // tap mode: original tier-1 tap-the-fire (or tap trapped people).
+    // Generous pads overlap, so the window nearest the tap wins.
     function tapModeTap(ix, iy) {
-        const pad = CONFIG.tapPad;
-        const hit = FF.scene.windows.find(w =>
-            (w.state === 'fire' || w.state === 'help') && inRect(ix, iy, w, pad)
-        );
+        const pad = tapPad();
+        let hit = null, hitD = Infinity;
+        FF.scene.windows.forEach(w => {
+            if (w.state !== 'fire' && w.state !== 'help') return;
+            if (!inRect(ix, iy, w, pad)) return;
+            const d = Math.hypot(ix - (w.x + w.w / 2), iy - (w.y + w.h / 2));
+            if (d < hitD) { hitD = d; hit = w; }
+        });
         if (!hit) return;
         if (hit === FF.truck.target || queue.includes(hit)) return;
 
@@ -349,6 +383,7 @@ FF.game = (function () {
     function update(dt, t) {
         if (!started) return;
 
+        if (dt > 0) fps += (1000 / dt - fps) * 0.05;
         if (shakeT > 0) shakeT -= dt;
         if (flashT > 0) { flashT -= dt; if (flashT <= 0) flashMsg = null; }
 
@@ -383,6 +418,7 @@ FF.game = (function () {
 
         waterVsFires();
 
+        updateSprayAudio();
         updateInstruction();
     }
 
@@ -393,6 +429,11 @@ FF.game = (function () {
         let msg;
         if (flashMsg) {
             msg = flashMsg;
+        } else if (FF.units && FF.units.playerHasLadder() &&
+                   (mode() === 'tap' || phase === 'READY')) {
+            // the player is working a backup ladder: that takes priority
+            msg = holding ? 'SOAK THE FIRE! 💦'
+                          : 'POINT THE BIG LADDER! HOLD TO SPRAY! 🪜';
         } else if (mode() === 'steps') {
             switch (phase) {
                 case 'ARRIVE':
@@ -423,7 +464,10 @@ FF.game = (function () {
                     msg = anyFires() ? 'TAP THE FIRE! 🔥' : 'GREAT WORK! ⭐';
             }
         }
-        if (instructionEl.textContent !== msg) instructionEl.textContent = msg;
+        if (instructionEl.textContent !== msg) {
+            instructionEl.textContent = msg;
+            if (FF.voice) FF.voice.say(msg);
+        }
     }
 
     function anyFires() {
@@ -442,6 +486,12 @@ FF.game = (function () {
     function onSettingChanged(key) {
         if (key === 'roundGoal') updateHud();
         if (key === 'controls') reset();
+        // looks baked into the prerendered layers need a repaint
+        if (key === 'timeOfDay' || key === 'hydrant') FF.scene.refresh();
+        if (key === 'voice' && FF.voice) {
+            if (S().v.voice === 'on') FF.voice.say('Voice is on. Let us go, chief!', true);
+            else FF.voice.stop();
+        }
     }
 
     // --- world-space overlays (painted style) ---
@@ -541,18 +591,21 @@ FF.game = (function () {
     }
 
     function drawAimCursor(x, t) {
-        if (phase !== 'READY' || celebrated) return;
+        if (celebrated) return;
+        const ladder = FF.units && FF.units.playerHasLadder();
+        if (!ladder && (mode() !== 'steps' || phase !== 'READY')) return;
+        const wet = spraying || (holding && ladder);
         const pulse = 0.75 + 0.25 * Math.sin(t * 0.012);
         const px = pointer.x, py = pointer.y;
         x.save();
-        x.strokeStyle = spraying ? 'rgba(111,195,239,0.95)' : 'rgba(255,255,255,0.9)';
+        x.strokeStyle = wet ? 'rgba(111,195,239,0.95)' : 'rgba(255,255,255,0.9)';
         x.lineWidth = 1.4;
         x.shadowColor = 'rgba(111,195,239,0.8)';
         x.shadowBlur = 5;
         x.beginPath();
         x.arc(px, py, 5 * pulse, 0, Math.PI * 2);
         x.stroke();
-        x.fillStyle = spraying ? FF.PAL.water2 : '#ffffff';
+        x.fillStyle = wet ? FF.PAL.water2 : '#ffffff';
         x.beginPath();
         x.arc(px, py, 1, 0, Math.PI * 2);
         x.fill();
@@ -574,6 +627,11 @@ FF.game = (function () {
     }
 
     function draw(x, t) {
+        drawMarks(x, t);
+        if (FF.settings && FF.settings.v.debug === 'on') drawDebug(x);
+    }
+
+    function drawMarks(x, t) {
         // trapped people waiting for the big ladder (both modes)
         FF.scene.windows.forEach(w => {
             if (w.state === 'help') roundMark(x, w, t, FF.PAL.water2);
@@ -593,6 +651,48 @@ FF.game = (function () {
         }
         queue.forEach(w => { if (w.state === 'fire' || w.state === 'help') marks.push(w); });
         marks.forEach(w => roundMark(x, w, t, FF.PAL.fire1));
+        drawAimCursor(x, t);   // shown while a backup ladder is in the player's hands
+    }
+
+    // --- debug overlay ---
+
+    function drawDebug(x) {
+        const pad = tapPad();
+        x.save();
+        x.lineWidth = 0.5;
+
+        // hit areas
+        x.strokeStyle = 'rgba(122,232,154,0.8)';
+        FF.scene.windows.forEach(w => {
+            if (w.state !== 'fire' && w.state !== 'help') return;
+            x.strokeRect(w.x - pad, w.y - pad, w.w + pad * 2, w.h + pad * 2);
+        });
+        x.strokeStyle = 'rgba(111,195,239,0.8)';
+        [FF.truck.rect, FF.scene.HYDRANT].forEach(r =>
+            x.strokeRect(r.x - stepPad(), r.y - stepPad(), r.w + stepPad() * 2, r.h + stepPad() * 2));
+
+        // ladder tips of the backup trucks
+        x.strokeStyle = 'rgba(255,217,85,0.9)';
+        FF.units.trucks.forEach(u => {
+            if (u.state === 'IDLE') return;
+            x.strokeRect(u.x - 4, 176, 70, 40);
+        });
+
+        // readout
+        const lines = [
+            'fps ' + fps.toFixed(0) + '  drops ' + FF.particles.drops.length,
+            'mode ' + mode() + '/' + phase + (holding ? ' HOLD' : ''),
+            'truck1 ' + FF.truck.state +
+                '  t2 ' + FF.units.trucks[0].state + '  t3 ' + FF.units.trucks[1].state,
+            'fires ' + activeFires() + '  saved ' + savedCount + '/' + goal()
+        ];
+        x.fillStyle = 'rgba(6,8,26,0.72)';
+        x.fillRect(2, FF.H - 30, 152, 28);
+        x.fillStyle = '#7ae89a';
+        x.font = '6px monospace';
+        x.textBaseline = 'top';
+        lines.forEach((ln, i) => x.fillText(ln, 5, FF.H - 28 + i * 6.6));
+        x.restore();
     }
 
     function shakeOffset() {
@@ -609,6 +709,7 @@ FF.game = (function () {
         onWindowRescued,
         get pointer() { return pointer; },
         get phase() { return phase; },
-        get spraying() { return spraying; }
+        get spraying() { return spraying; },
+        get holding() { return holding; }
     };
 })();

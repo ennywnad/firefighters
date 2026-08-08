@@ -28,6 +28,21 @@ FF.truck = (function () {
         gdir: 1
     };
 
+    // --- option lookups (kept tiny so the draw code stays readable) ---
+    const DEFAULT_PAINT = { light: '#f06a58', base: P.red, dark: P.redDark, ink: 'rgba(90,18,16,0.6)' };
+    function paint() {
+        return FF.settings && FF.settings.paint ? FF.settings.paint('truck1') : DEFAULT_PAINT;
+    }
+    function detailed() {
+        return !FF.settings || FF.settings.v.truckStyle !== 'classic';
+    }
+    function emergencyOn() {
+        return !!FF.settings && FF.settings.v.emergency === 'on';
+    }
+    function speedMul() {
+        return FF.settings ? FF.settings.num('truckSpeed') : 1;
+    }
+
     function isGroundFloor(win) {
         return win && win.row === FF.scene.buildings[win.b].floors - 1;
     }
@@ -104,7 +119,7 @@ FF.truck = (function () {
             case 'DRIVING': {
                 const px = t.parkMode ? t.parkX : targetParkX(t.target);
                 const dir = Math.sign(px - t.x);
-                const speed = 1.4 * step;
+                const speed = 1.4 * step * speedMul();
                 if (Math.abs(px - t.x) <= speed) {
                     t.x = px;
                     t.state = 'DEPLOY';
@@ -333,6 +348,8 @@ FF.truck = (function () {
     function drawBody(x) {
         const bx = t.x;
         const by = GROUND - 8 - BODY_H;
+        const C = paint();
+        const fancy = detailed();
 
         // soft ground shadow
         const sg = x.createRadialGradient(bx + BODY_W / 2, GROUND, 2, bx + BODY_W / 2, GROUND, BODY_W * 0.55);
@@ -345,47 +362,53 @@ FF.truck = (function () {
 
         // rear box (pump body)
         const rg2 = x.createLinearGradient(0, by + 2, 0, by + BODY_H);
-        rg2.addColorStop(0, '#f06a58'); rg2.addColorStop(0.25, P.red); rg2.addColorStop(1, P.redDark);
+        rg2.addColorStop(0, C.light); rg2.addColorStop(0.25, C.base); rg2.addColorStop(1, C.dark);
         x.fillStyle = rg2;
         rr(x, bx, by + 2, 40, BODY_H - 2, 1.6); x.fill();
-        x.strokeStyle = 'rgba(90,18,16,0.6)'; x.lineWidth = 0.5;
+        x.strokeStyle = C.ink; x.lineWidth = 0.5;
         rr(x, bx, by + 2, 40, BODY_H - 2, 1.6); x.stroke();
 
         // rear chevron
-        x.save();
-        rr(x, bx, by + 2, 3.5, BODY_H - 2, 1.6); x.clip();
-        for (let i = 0; i < 6; i++) {
-            x.fillStyle = i % 2 ? P.redDark : P.amber;
-            x.beginPath();
-            const yy = by + i * 3;
-            x.moveTo(bx, yy); x.lineTo(bx + 4, yy + 2.2);
-            x.lineTo(bx + 4, yy + 4.4); x.lineTo(bx, yy + 2.2);
-            x.closePath(); x.fill();
+        if (fancy) {
+            x.save();
+            rr(x, bx, by + 2, 3.5, BODY_H - 2, 1.6); x.clip();
+            for (let i = 0; i < 6; i++) {
+                x.fillStyle = i % 2 ? C.dark : P.amber;
+                x.beginPath();
+                const yy = by + i * 3;
+                x.moveTo(bx, yy); x.lineTo(bx + 4, yy + 2.2);
+                x.lineTo(bx + 4, yy + 4.4); x.lineTo(bx, yy + 2.2);
+                x.closePath(); x.fill();
+            }
+            x.restore();
         }
-        x.restore();
 
         // white stripe + gold pinstripe
         x.fillStyle = P.white;
         rr(x, bx + 2, by + 8, 37, 2, 1); x.fill();
-        x.fillStyle = P.amber;
-        x.fillRect(bx + 2, by + 10.2, 37, 0.6);
+        if (fancy) {
+            x.fillStyle = P.amber;
+            x.fillRect(bx + 2, by + 10.2, 37, 0.6);
+        }
 
         // roll-up gear doors
-        [4, 15, 26].forEach(gxo => {
-            const gd = x.createLinearGradient(0, by + 11, 0, by + 15);
-            gd.addColorStop(0, '#c4cad6'); gd.addColorStop(1, P.steelDark);
-            x.fillStyle = gd;
-            rr(x, bx + gxo, by + 11, 7.5, 4, 0.8); x.fill();
-            x.strokeStyle = 'rgba(60,66,80,0.7)'; x.lineWidth = 0.35;
-            x.beginPath();
-            x.moveTo(bx + gxo + 0.5, by + 12.3); x.lineTo(bx + gxo + 7, by + 12.3);
-            x.moveTo(bx + gxo + 0.5, by + 13.6); x.lineTo(bx + gxo + 7, by + 13.6);
-            x.stroke();
-        });
+        if (fancy) {
+            [4, 15, 26].forEach(gxo => {
+                const gd = x.createLinearGradient(0, by + 11, 0, by + 15);
+                gd.addColorStop(0, '#c4cad6'); gd.addColorStop(1, P.steelDark);
+                x.fillStyle = gd;
+                rr(x, bx + gxo, by + 11, 7.5, 4, 0.8); x.fill();
+                x.strokeStyle = 'rgba(60,66,80,0.7)'; x.lineWidth = 0.35;
+                x.beginPath();
+                x.moveTo(bx + gxo + 0.5, by + 12.3); x.lineTo(bx + gxo + 7, by + 12.3);
+                x.moveTo(bx + gxo + 0.5, by + 13.6); x.lineTo(bx + gxo + 7, by + 13.6);
+                x.stroke();
+            });
 
-        // ladder rack rail
-        x.fillStyle = P.steelDark;
-        rr(x, bx + 2, by + 0.8, 36, 1.2, 0.6); x.fill();
+            // ladder rack rail
+            x.fillStyle = P.steelDark;
+            rr(x, bx + 2, by + 0.8, 36, 1.2, 0.6); x.fill();
+        }
 
         // cab
         x.beginPath();
@@ -396,17 +419,19 @@ FF.truck = (function () {
         x.lineTo(bx + 40, by + BODY_H);
         x.closePath();
         const cg = x.createLinearGradient(0, by, 0, by + BODY_H);
-        cg.addColorStop(0, '#f06a58'); cg.addColorStop(0.3, P.red); cg.addColorStop(1, P.redDark);
+        cg.addColorStop(0, C.light); cg.addColorStop(0.3, C.base); cg.addColorStop(1, C.dark);
         x.fillStyle = cg;
         x.fill();
-        x.strokeStyle = 'rgba(90,18,16,0.6)'; x.lineWidth = 0.5;
+        x.strokeStyle = C.ink; x.lineWidth = 0.5;
         x.stroke();
 
         // door seam + handle
-        x.strokeStyle = 'rgba(90,18,16,0.55)'; x.lineWidth = 0.5;
-        x.beginPath(); x.moveTo(bx + 45.5, by + 2); x.lineTo(bx + 45.5, by + BODY_H - 2); x.stroke();
-        x.fillStyle = P.hub;
-        rr(x, bx + 43, by + 7, 2, 0.9, 0.45); x.fill();
+        if (fancy) {
+            x.strokeStyle = C.ink; x.lineWidth = 0.5;
+            x.beginPath(); x.moveTo(bx + 45.5, by + 2); x.lineTo(bx + 45.5, by + BODY_H - 2); x.stroke();
+            x.fillStyle = P.hub;
+            rr(x, bx + 43, by + 7, 2, 0.9, 0.45); x.fill();
+        }
 
         // windshield
         const wg = x.createLinearGradient(0, by + 2, 0, by + 8);
@@ -437,8 +462,8 @@ FF.truck = (function () {
             x.closePath(); x.fill();
         }
 
-        // light bar
-        const active = t.state !== 'IDLE' && t.state !== 'PACK';
+        // light bar (EMERGENCY keeps the beacons rolling even when parked)
+        const active = (t.state !== 'IDLE' && t.state !== 'PACK') || emergencyOn();
         const phase = Math.floor(t.lightT / 180) % 2;
         x.fillStyle = P.black;
         rr(x, bx + 43.5, by - 3, 10, 3.2, 1.2); x.fill();

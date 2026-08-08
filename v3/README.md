@@ -23,7 +23,7 @@ Both modes: huge tap targets, no fail states, a star per fire, confetti at the g
 
 ## The city block
 
-The view is a wide panorama (512x216 world) so more of the city fits on screen.
+The view is a wide panorama (512x240 world) so more of the city fits on screen.
 Four buildings can all catch fire: a tan walk-up (3x3 windows), the tall red
 hotel (4x5), a slate rowhouse (2x4), and a second tan hotel (3x4). Clear every
 fire in a building and it goes **safe** — a green shield appears and no new fires
@@ -34,12 +34,27 @@ building and keep it that way.
 
 A walkie-talkie sits at the bottom-right with two buttons — red calls Ladder 2
 (rolls in from the right), green calls Ladder 3 (rolls in from the left). Once a
-truck arrives, **one tap on it** makes the crew do the needful: a firefighter hops
-out and walks to the hydrant, hooks up the supply hose, the outriggers drop, the
-ladder raises and extends, and the cannon firefighter at the tip automatically
-soaks any fire within reach — retargeting on his own as new fires break out.
-Tapping a deployed truck packs the ladder; tapping again redeploys (the hose
-stays connected). Works in both control modes.
+truck arrives, **one tap on it** sends the crew to work: a firefighter hops out
+and walks to the hydrant, hooks up the supply hose, the outriggers drop, and the
+ladder comes off the rack. Tapping a deployed truck packs the ladder; tapping
+again redeploys (the hose stays connected). Works in both control modes.
+
+Who works the ladder is up to you — **BACKUP CREW** in the options:
+
+- **YOU (default):** the ladder follows your finger. Point anywhere and it swings
+  and extends to reach; **hold** and the cannon firefighter at the tip soaks
+  whatever you are pointing at. Rest the ladder tip on a window with trapped
+  people and they climb down to the meeting point. Both backup ladders follow
+  you at once, so you can steer two streams of water.
+- **AUTO:** the original behaviour — the crew picks its own targets, sprays
+  fires and performs rescues by itself (rescues first).
+
+## Switching versions (the fire truck badge)
+
+The v1 / v2 / v3 links used to sit on the very edge of the screen, which is a
+poor touch target. They now live behind the **🚒 badge in the upper middle**,
+next to the instruction pill: tap it and the truck honks and wiggles, and three
+big pill buttons drop down underneath. Tap anywhere else to put them away.
 
 ## Wet surfaces
 
@@ -57,46 +72,79 @@ occupant evacuates to the **meeting point** — a little crowd gathers on the
 sidewalk in front of their building (and hops with joy when it goes safe).
 Sometimes neighbors get **trapped**: a couple of people appear at a nearby
 window waving with a HELP bubble and a glowing ring. Any ladder can rescue
-them — backup trucks prioritize rescues automatically, and in tap mode you can
-tap the window to send truck 1. Rescues earn a star, and a building can't go
+them — rest a backup ladder tip on their window yourself (or let the crew do it
+with BACKUP CREW = auto), and in tap mode you can tap the window to send truck 1.
+Rescues earn a star, and a building can't go
 "safe" while someone is still trapped. When backup is needed (a rescue waiting,
 or 2+ fires) the walkie-talkie pulses and the HUD calls it out.
 
 ## Options menu (⚙️ button)
 
-Everything persists in localStorage and applies live; the game pauses while the
-menu is open.
+Everything persists in localStorage (key `firefighterV3Settings`) and applies
+live; the game pauses while the menu is open. The options are split across three
+tabs so they stay thumb-sized.
+
+### PLAY
 
 | Setting | Options | What it does |
 |---|---|---|
 | CONTROLS | steps / tap | v1-style step sequence + aim, or one-tap auto |
-| PEOPLE | on / off | occupants in windows |
+| BACKUP CREW | you / auto | you work the backup ladders, or the crew does |
+| STARS TO WIN | 5 / 8 / 12 | round length |
 | NEW FIRES | chill / normal / busy | how often fires appear (10s / 6s / 3s) |
 | FIRES AT ONCE | 1 / 2 / 3 | max simultaneous fires |
 | FIRE SPREAD | off / slow / fast | fires jump to adjacent windows (14s / 7s) |
 | WATER POWER | gentle / strong | how long spraying takes |
 | SAFE TIME | short / medium / long | building cooldown (10s / 25s / 60s) |
-| STARS TO WIN | 5 / 8 / 12 | round length |
+| PEOPLE TO SAVE | rare / some / lots | how often neighbors get trapped, and how many at once |
+| TRUCK SPEED | slow / normal / fast | how fast the trucks drive in |
+| TAP SIZE | normal / big / huge | grows every hit area at once, for smaller fingers |
+
+### LOOKS
+
+| Setting | Options | What it does |
+|---|---|---|
+| PEOPLE | on / off | occupants in windows |
+| PETS | on / off | the family cat on the sill (and at the meeting point) |
+| TIME OF DAY | dusk / night / day | repaints the sky, skyline, moon/sun and streetlamps |
+| WEATHER | clear / rain / snow | rain streaks or drifting snow over the block |
+| TRUCK | classic / detailed | plain bodywork, or chevrons, gear doors and pinstripes |
+| TRUCK 1/2/3 COLOR | red / lime / blue / orange | paint jobs for the engine and both ladders (v1 parity) |
+| HYDRANT | classic / modern | brass pumper cap, or squarer chrome-and-red |
+| WINDOW LIGHTS | still / slow / normal | how often flats flick their lights on and off |
+| EMERGENCY | off / on | beacons keep rolling even when the trucks are parked |
+| 2X SPRAY | off / on | fat water droplets |
+
+### SOUND
+
+| Setting | Options | What it does |
+|---|---|---|
+| WATER SOUND | default / deeper / rumbly / off | hose hiss, from bright spray to a low rumble |
+| VOICE | off / on | reads the on-screen instruction out loud (speech synthesis) |
+| DEBUG | off / on | fps, particle count, unit states and hit boxes on screen |
 
 ## Growing with the player
 
-- **Built:** tap mode (one-tap auto) and steps mode (setup sequence + manual aim)
-- **Planned:** aim from the ladder top after positioning it, drive the truck for
-  ladder reach, window rescues
+- **Built:** tap mode (one-tap auto), steps mode (setup sequence + manual aim),
+  player-driven backup ladders (aim from the ladder top, hold to spray, ladder
+  rescues), window rescues
+- **Planned:** drive the truck yourself for ladder reach
 
 ## Architecture
 
-Plain scripts (works from `file://`), one global namespace `FF`, low-res canvas
-(384x216) scaled up with pixel-perfect nearest-neighbor for the 16-bit look.
+Plain scripts (works from `file://`), one global namespace `FF`, a 512x240 world
+drawn to a letterboxed hi-res canvas (device-pixel-ratio aware, smoothed) for the
+painted look.
 
 | File | Owns |
 |---|---|
 | `js/sprites.js` | palette + string-map pixel sprites (firefighters, occupants) |
-| `js/settings.js` | options schema, localStorage persistence, menu UI |
+| `js/settings.js` | options schema, localStorage persistence, tabbed menu UI |
+| `js/voice.js` | optional spoken instructions (speech synthesis, off by default) |
 | `js/scene.js` | sky, skyline, 4-building block, window grids + states, street, hydrants |
 | `js/particles.js` | flames, water drops, steam, confetti, star pops, wet surfaces |
 | `js/truck.js` | truck state machine: drive → deploy → raise → extend → spray |
-| `js/units.js` | walkie-talkie + two backup ladder trucks with self-deploying crews |
+| `js/units.js` | walkie-talkie + two backup ladder trucks (player-aimed or automatic) |
 | `js/audio.js` | dependency-free WebAudio synth (siren, spray, chimes, fanfare) |
 | `js/game.js` | round flow, input, HUD, water-vs-fire collision |
 | `js/main.js` | boot, letterboxing, main loop |

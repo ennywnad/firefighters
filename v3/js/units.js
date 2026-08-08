@@ -19,6 +19,28 @@ FF.units = (function () {
         green: { light: '#a4d64e', base: '#7fb640',  dark: '#567c26', ink: 'rgba(38,58,14,0.6)' }
     };
 
+    // --- option lookups ---
+    function paintFor(u) {
+        const key = u.id === 2 ? 'truck2' : 'truck3';
+        return FF.settings && FF.settings.paint ? FF.settings.paint(key) : u.scheme;
+    }
+    function detailed() {
+        return !FF.settings || FF.settings.v.truckStyle !== 'classic';
+    }
+    function emergencyOn() {
+        return !!FF.settings && FF.settings.v.emergency === 'on';
+    }
+    function speedMul() {
+        return FF.settings ? FF.settings.num('truckSpeed') : 1;
+    }
+    // BACKUP CREW = 'you': the player aims the ladder and works the cannon
+    function manual() {
+        return !FF.settings || FF.settings.v.backup !== 'auto';
+    }
+    function tapPad() {
+        return FF.settings ? FF.settings.num('tapSize') - 4 : 4;
+    }
+
     function mkTruck(id, dir, scheme, parkX) {
         return {
             id, dir, scheme, parkX,
@@ -127,6 +149,14 @@ FF.units = (function () {
         u.target = null;
     }
 
+    // where the ladder heads while it is going up: the crew picks a window,
+    // the player just gets it off the rack ready to aim
+    function raiseGoal(u) {
+        if (manual()) { defaultGoal(u); return; }
+        const w = acquireTarget(u);
+        if (w) { u.target = w; computeGoal(u, w); } else defaultGoal(u);
+    }
+
     function acquireTarget(u) {
         const pv = pivot(u);
         const other = trucks.find(o => o !== u);
@@ -183,10 +213,9 @@ FF.units = (function () {
                 } else {
                     u.state = 'RAISE';
                     u.stateT = 0;
-                    const w = acquireTarget(u);
-                    if (w) { u.target = w; computeGoal(u, w); } else defaultGoal(u);
+                    raiseGoal(u);
                     if (FF.audio) FF.audio.ratchet();
-                    flash('LADDER UP! 🪜', 1600);
+                    flash(manual() ? 'LADDER UP! POINT WHERE TO GO! 🪜' : 'LADDER UP! 🪜', 1600);
                 }
                 return true;
             case 'READY':
@@ -200,15 +229,21 @@ FF.units = (function () {
     }
 
     function handleTap(ix, iy) {
-        // walkie-talkie buttons
+        // walkie-talkie buttons: a big TAP SIZE makes their pads overlap,
+        // so the nearer button wins instead of whichever comes first
+        let pick = -1, pickD = Infinity;
         for (let i = 0; i < 2; i++) {
-            if (inRect(ix, iy, btnRect(i), 4)) {
-                walkie.press[i] = 180;
-                const u = trucks[i];
-                if (u.state === 'IDLE') call(u);
-                else truckTapped(u);
-                return true;
-            }
+            const r = btnRect(i);
+            if (!inRect(ix, iy, r, tapPad())) continue;
+            const d = Math.hypot(ix - (r.x + r.w / 2), iy - (r.y + r.h / 2));
+            if (d < pickD) { pickD = d; pick = i; }
+        }
+        if (pick >= 0) {
+            walkie.press[pick] = 180;
+            const u = trucks[pick];
+            if (u.state === 'IDLE') call(u);
+            else truckTapped(u);
+            return true;
         }
         // the trucks themselves
         for (const u of trucks) {
@@ -242,8 +277,8 @@ FF.units = (function () {
         if (hintT >= 9000) {
             hintT = 0;
             flash(helps
-                ? 'THEY NEED THE BIG LADDER! USE THE WALKIE-TALKIE! 📻'
-                : 'LOTS OF FIRE! CALL BACKUP ON THE WALKIE-TALKIE! 📻', 3000);
+                ? 'THEY NEED THE BIG LADDER! 📻'
+                : 'LOTS OF FIRE! CALL BACKUP! 📻', 3000);
         }
     }
 
@@ -274,7 +309,7 @@ FF.units = (function () {
 
             switch (u.state) {
                 case 'DRIVING': {
-                    const speed = 1.5 * step;
+                    const speed = 1.5 * step * speedMul();
                     const d = u.parkX - u.x;
                     if (Math.abs(d) <= speed) {
                         u.x = u.parkX;
@@ -311,8 +346,7 @@ FF.units = (function () {
                         u.walker.done = true;
                         u.state = 'RAISE';
                         u.stateT = 0;
-                        const w = acquireTarget(u);
-                        if (w) { u.target = w; computeGoal(u, w); } else defaultGoal(u);
+                        raiseGoal(u);
                         if (FF.audio) FF.audio.saveChime();
                         flash('WATER ON! LADDER UP! 💧🪜', 2000);
                     }
@@ -339,6 +373,9 @@ FF.units = (function () {
                     break;
                 }
                 case 'READY': {
+                    // BACKUP CREW = 'you': the player drives the ladder and cannon
+                    if (manual()) { updateManual(u, dt, step); break; }
+
                     // keep or find a target window
                     if (!u.target || (u.target.state !== 'fire' && u.target.state !== 'help')) {
                         u.target = acquireTarget(u);
@@ -397,6 +434,79 @@ FF.units = (function () {
             // if the truck packs up, the ground firefighter heads home too
             if (u.state !== 'READY' && u.gunner) returnGunner(u, step);
         });
+    }
+
+    // --- player-driven ladder + cannon (BACKUP CREW = 'you') ---
+    //  Point anywhere: the ladder swings and extends to follow you.
+    //  Hold: the cannon crew soaks whatever you are pointing at.
+    //  Rest the ladder tip on a window with trapped people: they climb down.
+    const RESCUE_HOLD = 1500;   // ms the tip must stay at the window
+
+    function aimAtPointer(u, step) {
+        const pv = pivot(u);
+        const pt = FF.game.pointer;
+        const ay = Math.min(pt.y, pv.y - 4);        // never aim into the road
+        let a = Math.atan2(ay - pv.y, pt.x - pv.x);
+        if (u.dir < 0 && a < Math.PI / 2) a += Math.PI * 2;
+        u.targetAngle = a;
+        u.targetLen = Math.max(16, Math.min(MAX_LEN, Math.hypot(pt.x - pv.x, ay - pv.y)));
+
+        u.ladderAngle += (u.targetAngle - u.ladderAngle) * 0.12 * step;
+        const dl = u.targetLen - u.ladderLen;
+        u.ladderLen += Math.max(-2.2 * step, Math.min(2.2 * step, dl));
+
+        const tip = ladderTip(u);
+        u.cannonA = Math.atan2(pt.y - tip.y, pt.x - tip.x);
+    }
+
+    function tipOnWindow(tip, w) {
+        const pad = 9;
+        return tip.x >= w.x - pad && tip.x <= w.x + w.w + pad &&
+               tip.y >= w.y - pad && tip.y <= w.y + w.h + pad;
+    }
+
+    function updateManual(u, dt, step) {
+        returnGunner(u, step);
+        if (!FF.game || !FF.game.pointer) return;
+
+        aimAtPointer(u, step);
+
+        const tip = ladderTip(u);
+
+        // trapped people climb down once the ladder rests at their window
+        const rescue = FF.scene.windows.find(w => w.state === 'help' && tipOnWindow(tip, w));
+        if (rescue) {
+            u.target = rescue;
+            u.rescueT += dt;
+            if (u.rescueT >= RESCUE_HOLD) {
+                u.rescueT = 0;
+                u.target = null;
+                if (FF.game.onWindowRescued) FF.game.onWindowRescued(rescue);
+            }
+        } else {
+            u.rescueT = 0;
+            if (u.target && u.target.state === 'help') u.target = null;
+        }
+
+        // the cannon only runs while the player holds down
+        if (FF.game.holding) sprayToward(u, tip, FF.game.pointer);
+    }
+
+    function sprayToward(u, tip, pt) {
+        const g = 0.014;
+        for (let i = 0; i < 2; i++) {
+            const dx = pt.x - tip.x, dy = pt.y - tip.y;
+            const d = Math.max(8, Math.hypot(dx, dy));
+            const sp = 1.6 + Math.random() * 0.4;
+            const tf = d / sp;
+            FF.particles.spawnDrop(
+                tip.x, tip.y - 2,
+                dx / tf + (Math.random() - 0.5) * 0.1,
+                dy / tf - 0.5 * g * tf + (Math.random() - 0.5) * 0.1,
+                g,
+                tf * (1.02 + Math.random() * 0.12)
+            );
+        }
     }
 
     function easeLadder(u, angle, len, step) {
@@ -464,23 +574,7 @@ FF.units = (function () {
         const tip = ladderTip(u);
         const pt = FF.game.pointer;
         u.cannonA = Math.atan2(pt.y - tip.y, pt.x - tip.x);
-        const steps = !FF.settings || FF.settings.v.controls !== 'tap';
-        if (steps && FF.game.spraying && FF.game.phase === 'READY') {
-            const g = 0.014;
-            for (let i = 0; i < 2; i++) {
-                const dx = pt.x - tip.x, dy = pt.y - tip.y;
-                const d = Math.max(8, Math.hypot(dx, dy));
-                const sp = 1.6 + Math.random() * 0.4;
-                const tf = d / sp;
-                FF.particles.spawnDrop(
-                    tip.x, tip.y - 2,
-                    dx / tf + (Math.random() - 0.5) * 0.1,
-                    dy / tf - 0.5 * g * tf + (Math.random() - 0.5) * 0.1,
-                    g,
-                    tf * (1.02 + Math.random() * 0.12)
-                );
-            }
-        }
+        if (FF.game.holding) sprayToward(u, tip, pt);
     }
 
     function sprayAt(u, win) {
@@ -568,7 +662,8 @@ FF.units = (function () {
     }
 
     function drawBody(x, u) {
-        const C = u.scheme;
+        const C = paintFor(u);
+        const fancy = detailed();
         const by = GROUND - 8 - BODY_H;
 
         // ground shadow
@@ -606,40 +701,44 @@ FF.units = (function () {
         rr(x, bx, by + 2, 44, BODY_H - 2, 1.6); x.stroke();
 
         // rear chevron
-        x.save();
-        rr(x, bx, by + 2, 3.5, BODY_H - 2, 1.6); x.clip();
-        for (let i = 0; i < 6; i++) {
-            x.fillStyle = i % 2 ? C.dark : P.amber;
-            const yy = by + i * 3;
-            x.beginPath();
-            x.moveTo(bx, yy); x.lineTo(bx + 4, yy + 2.2);
-            x.lineTo(bx + 4, yy + 4.4); x.lineTo(bx, yy + 2.2);
-            x.closePath(); x.fill();
+        if (fancy) {
+            x.save();
+            rr(x, bx, by + 2, 3.5, BODY_H - 2, 1.6); x.clip();
+            for (let i = 0; i < 6; i++) {
+                x.fillStyle = i % 2 ? C.dark : P.amber;
+                const yy = by + i * 3;
+                x.beginPath();
+                x.moveTo(bx, yy); x.lineTo(bx + 4, yy + 2.2);
+                x.lineTo(bx + 4, yy + 4.4); x.lineTo(bx, yy + 2.2);
+                x.closePath(); x.fill();
+            }
+            x.restore();
         }
-        x.restore();
 
         // stripe + pinstripe
         x.fillStyle = P.white;
         rr(x, bx + 2, by + 8, 41, 2, 1); x.fill();
-        x.fillStyle = P.amber;
-        x.fillRect(bx + 2, by + 10.2, 41, 0.6);
+        if (fancy) {
+            x.fillStyle = P.amber;
+            x.fillRect(bx + 2, by + 10.2, 41, 0.6);
 
-        // gear doors
-        [5, 17, 29].forEach(gxo => {
-            const gd = x.createLinearGradient(0, by + 11, 0, by + 15);
-            gd.addColorStop(0, '#c4cad6'); gd.addColorStop(1, P.steelDark);
-            x.fillStyle = gd;
-            rr(x, bx + gxo, by + 11, 7.5, 4, 0.8); x.fill();
-            x.strokeStyle = 'rgba(60,66,80,0.7)'; x.lineWidth = 0.35;
-            x.beginPath();
-            x.moveTo(bx + gxo + 0.5, by + 12.3); x.lineTo(bx + gxo + 7, by + 12.3);
-            x.moveTo(bx + gxo + 0.5, by + 13.6); x.lineTo(bx + gxo + 7, by + 13.6);
-            x.stroke();
-        });
+            // gear doors
+            [5, 17, 29].forEach(gxo => {
+                const gd = x.createLinearGradient(0, by + 11, 0, by + 15);
+                gd.addColorStop(0, '#c4cad6'); gd.addColorStop(1, P.steelDark);
+                x.fillStyle = gd;
+                rr(x, bx + gxo, by + 11, 7.5, 4, 0.8); x.fill();
+                x.strokeStyle = 'rgba(60,66,80,0.7)'; x.lineWidth = 0.35;
+                x.beginPath();
+                x.moveTo(bx + gxo + 0.5, by + 12.3); x.lineTo(bx + gxo + 7, by + 12.3);
+                x.moveTo(bx + gxo + 0.5, by + 13.6); x.lineTo(bx + gxo + 7, by + 13.6);
+                x.stroke();
+            });
 
-        // ladder rack rail
-        x.fillStyle = P.steelDark;
-        rr(x, bx + 2, by + 0.8, 40, 1.2, 0.6); x.fill();
+            // ladder rack rail
+            x.fillStyle = P.steelDark;
+            rr(x, bx + 2, by + 0.8, 40, 1.2, 0.6); x.fill();
+        }
 
         // cab
         x.beginPath();
@@ -657,10 +756,12 @@ FF.units = (function () {
         x.stroke();
 
         // door seam + handle
-        x.strokeStyle = C.ink; x.lineWidth = 0.5;
-        x.beginPath(); x.moveTo(bx + 50, by + 2); x.lineTo(bx + 50, by + BODY_H - 2); x.stroke();
-        x.fillStyle = P.hub;
-        rr(x, bx + 47.5, by + 7, 2, 0.9, 0.45); x.fill();
+        if (fancy) {
+            x.strokeStyle = C.ink; x.lineWidth = 0.5;
+            x.beginPath(); x.moveTo(bx + 50, by + 2); x.lineTo(bx + 50, by + BODY_H - 2); x.stroke();
+            x.fillStyle = P.hub;
+            rr(x, bx + 47.5, by + 7, 2, 0.9, 0.45); x.fill();
+        }
 
         // windshield
         const wg = x.createLinearGradient(0, by + 2, 0, by + 8);
@@ -681,7 +782,7 @@ FF.units = (function () {
         x.beginPath(); x.arc(bx + BODY_W - 0.5, by + 5, 1, 0, Math.PI * 2); x.fill();
 
         // light bar (flashes while driving / waiting for a tap)
-        const active = u.state === 'DRIVING' || u.state === 'WAIT';
+        const active = u.state === 'DRIVING' || u.state === 'WAIT' || emergencyOn();
         const phase = Math.floor(u.lightT / 180) % 2;
         x.fillStyle = P.black;
         rr(x, bx + 48.5, by - 3, 10, 3.2, 1.2); x.fill();
@@ -790,11 +891,10 @@ FF.units = (function () {
         if ((u.state === 'READY' || u.state === 'EXTEND' || u.state === 'RETRACT') && u.ladderLen > 24) {
             const tip = ladderTip(u);
             const ladderTarget = u.target && !isGroundFloor(u.target) ? u.target : null;
-            const freeCannon = u.state === 'READY' && !ladderTarget;
-            const playerSpraying = freeCannon && FF.game && FF.game.spraying &&
-                                   FF.game.phase === 'READY' &&
-                                   (!FF.settings || FF.settings.v.controls !== 'tap');
-            const spraying = (u.state === 'READY' && ladderTarget && ladderTarget.state === 'fire') ||
+            const freeCannon = u.state === 'READY' && (manual() || !ladderTarget);
+            const playerSpraying = freeCannon && FF.game && FF.game.holding;
+            const spraying = (u.state === 'READY' && !manual() &&
+                              ladderTarget && ladderTarget.state === 'fire') ||
                              playerSpraying;
             const rescuing = u.state === 'READY' && ladderTarget &&
                              ladderTarget.state === 'help' && u.rescueT > 0;
@@ -882,8 +982,8 @@ FF.units = (function () {
             x.stroke();
         }
 
-        // call buttons: red truck + green truck
-        const cols = [SCHEMES.red, SCHEMES.green];
+        // call buttons, painted to match each truck
+        const cols = trucks.map(paintFor);
         for (let i = 0; i < 2; i++) {
             const r = btnRect(i);
             const u = trucks[i];
@@ -927,8 +1027,13 @@ FF.units = (function () {
 
     reset();
 
+    // is a backup ladder up and waiting for the player to work it?
+    function playerHasLadder() {
+        return manual() && trucks.some(u => u.state === 'READY');
+    }
+
     return {
-        update, draw, handleTap, reset, markWetAt,
+        update, draw, handleTap, reset, markWetAt, playerHasLadder,
         get trucks() { return trucks; }
     };
 })();
