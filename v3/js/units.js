@@ -33,7 +33,7 @@ FF.units = (function () {
     function speedMul() {
         return FF.settings ? FF.settings.num('truckSpeed') : 1;
     }
-    // BACKUP CREW = 'you': the player aims the ladder and works the cannon
+    // BACKUP LADDERS = 'you': the player aims the ladder and works the cannon
     function manual() {
         return !FF.settings || FF.settings.v.backup !== 'auto';
     }
@@ -373,7 +373,7 @@ FF.units = (function () {
                     break;
                 }
                 case 'READY': {
-                    // BACKUP CREW = 'you': the player drives the ladder and cannon
+                    // BACKUP LADDERS = 'you': the player drives the ladder and cannon
                     if (manual()) { updateManual(u, dt, step); break; }
 
                     // keep or find a target window
@@ -436,7 +436,7 @@ FF.units = (function () {
         });
     }
 
-    // --- player-driven ladder + cannon (BACKUP CREW = 'you') ---
+    // --- player-driven ladder + cannon (BACKUP LADDERS = 'you') ---
     //  Point anywhere: the ladder swings and extends to follow you.
     //  Hold: the cannon crew soaks whatever you are pointing at.
     //  Rest the ladder tip on a window with trapped people: they climb down.

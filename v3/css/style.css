@@ -50,76 +50,6 @@ html, body {
     z-index: 2;
 }
 
-#version-btn {
-    flex: none;
-    pointer-events: auto;
-    font-size: clamp(15px, 3.2vw, 30px);
-    line-height: 1;
-    background: linear-gradient(rgba(40, 43, 96, 0.92), rgba(20, 22, 58, 0.92));
-    border: 3px solid #f4c84a;
-    border-radius: 50%;
-    width: 1.9em; height: 1.9em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.22);
-    cursor: pointer;
-    padding: 0;
-}
-
-#version-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
-
-/* a little drive-and-honk wiggle when tapped */
-#version-btn.honk { animation: honk 0.5s ease-in-out; }
-
-@keyframes honk {
-    0%   { transform: translateX(0) rotate(0); }
-    25%  { transform: translateX(5px) rotate(-7deg); }
-    55%  { transform: translateX(-4px) rotate(6deg); }
-    80%  { transform: translateX(2px) rotate(-3deg); }
-    100% { transform: translateX(0) rotate(0); }
-}
-
-/* hangs off the bottom of the truck badge, however tall the pill grows */
-#version-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 0.4em;
-    pointer-events: auto;
-    display: flex;
-    gap: 0.5em;
-    padding: 0.4em 0.5em;
-    background: linear-gradient(rgba(40, 43, 96, 0.96), rgba(20, 22, 58, 0.96));
-    border: 3px solid #f4c84a;
-    border-radius: 999px;
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
-    z-index: 3;
-}
-
-#version-menu.hidden { display: none; }
-
-#version-menu a, #version-menu span {
-    font-family: inherit;
-    font-weight: 800;
-    font-size: clamp(13px, 2.6vw, 22px);
-    line-height: 1;
-    text-decoration: none;
-    color: #fff6da;
-    background: #232759;
-    border: 2px solid #4a3b8c;
-    border-radius: 999px;
-    padding: 0.4em 0.9em;
-    min-width: 2.6em;
-    text-align: center;
-}
-
-#version-menu span[aria-current] {
-    color: #1c1f4e;
-    background: linear-gradient(#ffe9a0, #ffd97a);
-    border-color: #fff6da;
-}
-
 #instruction {
     color: #fff6da;
     font-weight: 800;
@@ -198,7 +128,7 @@ html, body {
     box-shadow: 0 10px 0 rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 246, 218, 0.18);
     padding: 2.2vh 2.5vw;
     max-height: 92vh;
-    max-width: 96vw;
+    width: min(58em, 96vw);
     display: flex;
     flex-direction: column;
 }
@@ -254,7 +184,17 @@ html, body {
     align-items: center;
     justify-content: space-between;
     gap: 2vw;
-    margin-bottom: 1vh;
+    margin-bottom: 1.1vh;
+    padding-bottom: 1vh;
+    border-bottom: 1px solid rgba(255, 246, 218, 0.10);
+}
+
+.set-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+    min-width: 0;
+    max-width: 24em;
 }
 
 .set-label {
@@ -265,7 +205,28 @@ html, body {
     white-space: nowrap;
 }
 
-.set-opts { display: flex; gap: 0.5vw; }
+/* the plain-English line under each label */
+.set-help {
+    color: #a8b2d8;
+    font-weight: 600;
+    font-size: clamp(9px, 1.45vw, 13px);
+    line-height: 1.25;
+    letter-spacing: 0;
+}
+
+.set-opts { display: flex; gap: 0.5vw; flex: none; align-items: center; }
+
+.set-reset {
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(10px, 1.8vw, 15px);
+    color: #fff;
+    background: linear-gradient(#f05a4a, #d83a34);
+    border: 2px solid #ffb0a0;
+    border-radius: 999px;
+    padding: 0.35em 1.1em;
+    cursor: pointer;
+}
 
 .set-opts button {
     font-family: inherit;

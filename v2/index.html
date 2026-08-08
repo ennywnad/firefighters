@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Firefighter Adventures — Arcade</title>
+<!-- first in the head on purpose: the shared title sequence has to be on screen
+     before any third-party font can hold the page up -->
+<link rel="stylesheet" href="../shared/fire-rescue-bar.css">
+<script src="../shared/fire-rescue-bar.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Bangers&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<nav class="version-switcher" aria-label="Game version"
-     style="position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;gap:6px;font:12px/1 system-ui,sans-serif;background:rgba(0,0,0,.45);padding:4px 8px;border-radius:999px;opacity:.85">
-  <a href="../" style="color:#fff;text-decoration:none;padding:2px 6px">v1</a>
-  <span aria-current="page" style="color:#ffd54a;font-weight:700;padding:2px 6px">v2</span>
-  <a href="../v3/" style="color:#fff;text-decoration:none;padding:2px 6px">v3</a>
-</nav>
 <div id="stage">
     <canvas id="game"></canvas>
 
     <div id="hud">
-        <div id="instruction">TAP THE FIRE!</div>
+        <div id="topbar">
+            <div id="instruction">TAP THE FIRE!</div>
+        </div>
         <div id="stars"></div>
         <button id="mute" aria-label="Sound on/off">&#128266;</button>
         <button id="settings-btn" aria-label="Settings">&#9881;&#65039;</button>
@@ -47,5 +47,12 @@
 <script src="js/audio.js"></script>
 <script src="js/game.js"></script>
 <script src="js/main.js"></script>
+<script>
+// fire truck badge in the upper middle: lap around the screen on a click,
+// version picker on hover / tap (shared with v1 and v3)
+if (window.FireRescueBar) {
+    FireRescueBar.mount({ into: document.getElementById('topbar'), first: true });
+}
+</script>
 </body>
 </html>

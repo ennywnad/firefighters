@@ -570,6 +570,12 @@ function setupFireTruckClick() {
     const fireTruckIcon = document.getElementById('fire-truck-icon');
     let canClick = false;
 
+    // the shared bar wraps the header truck: clicking it sends the truck on a
+    // lap around the screen, and hovering it reveals the v1 / v2 / v3 picker
+    if (fireTruckIcon && window.FireRescueBar) {
+        FireRescueBar.mount({ truck: fireTruckIcon });
+    }
+
     if (fireTruckIcon) {
         // Wait for the initial animation to complete before enabling clicks
         setTimeout(() => {
