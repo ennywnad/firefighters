@@ -87,7 +87,7 @@ class FirefighterScoreboard {
             achievement.earned = false;
         });
         
-        console.log('🚒 Fire rescue session started');
+        ffLog('🚒 Fire rescue session started');
     }
     
     /**
@@ -99,7 +99,7 @@ class FirefighterScoreboard {
         this.updateAccuracy();
         
         window.soundManager?.playSuccess('C5', '4n');
-        console.log(`🔥 Fire extinguished! Total: ${this.stats.firesExtinguished}`);
+        ffLog(`🔥 Fire extinguished! Total: ${this.stats.firesExtinguished}`);
     }
     
     /**
@@ -132,7 +132,7 @@ class FirefighterScoreboard {
         this.checkAchievements();
         this.saveStats();
         
-        console.log('🏆 Fire rescue session completed:', this.stats);
+        ffLog('🏆 Fire rescue session completed:', this.stats);
         return this.stats;
     }
     
@@ -143,7 +143,7 @@ class FirefighterScoreboard {
         this.achievements.forEach(achievement => {
             if (achievement.condition(this.stats)) {
                 achievement.earned = true;
-                console.log(`🏅 Achievement earned: ${achievement.name}`);
+                ffLog(`🏅 Achievement earned: ${achievement.name}`);
                 
                 // Play achievement sound
                 if (window.soundManager) {

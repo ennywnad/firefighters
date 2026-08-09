@@ -269,7 +269,7 @@ class SoundManager {
         try {
             if (Tone.context.state !== 'running') {
                 await Tone.start();
-                console.log('Audio context started');
+                ffLog('Audio context started');
             }
         } catch (error) {
             console.warn('Failed to start audio context:', error);

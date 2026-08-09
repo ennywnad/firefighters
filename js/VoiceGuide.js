@@ -67,7 +67,7 @@ class VoiceGuide {
             this.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
         }
         
-        console.log('Selected voice:', this.voice?.name || 'None');
+        ffLog('Selected voice:', this.voice?.name || 'None');
     }
     
     /**
@@ -93,11 +93,11 @@ class VoiceGuide {
         
         // Event handlers
         this.currentUtterance.onstart = () => {
-            console.log('Voice guidance started:', text);
+            ffLog('Voice guidance started:', text);
         };
         
         this.currentUtterance.onend = () => {
-            console.log('Voice guidance ended');
+            ffLog('Voice guidance ended');
             this.currentUtterance = null;
             options.onComplete?.();
         };
@@ -191,7 +191,7 @@ class VoiceGuide {
                 onComplete: () => {
                     // Add a small pause after instructions
                     setTimeout(() => {
-                        console.log('Instruction complete');
+                        ffLog('Instruction complete');
                     }, 300);
                 }
             });

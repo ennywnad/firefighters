@@ -1275,7 +1275,7 @@ class FireRescueLevel {
             };
             this.fires.push(fire);
             this.totalFires++;
-            console.log(`Spawned fire at (${fire.x}, ${fire.y}) on building at (${building.x}, ${building.y})`);
+            ffLog(`Spawned fire at (${fire.x}, ${fire.y}) on building at (${building.x}, ${building.y})`);
         }
     }
 
