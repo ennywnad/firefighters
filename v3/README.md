@@ -76,6 +76,22 @@ brick, and runoff pools into visible blue puddles on the sidewalk and street.
 Trucks caught in the spray get a glossy wet sheen with dribbles running off.
 Walls dry out faster than puddles.
 
+## The hand ladder (truck 1's crew on foot)
+
+The two backup trucks park in fixed spots, so the far-left end of the block —
+the top two floors of the tan walk-up — sits outside the reach of both their
+ladders. Trapped people there used to be unrescuable in steps mode.
+
+Now truck 1 carries a portable ladder. **Tap the trapped people** and a
+firefighter walks over with it, steps up onto the kerb, swings the ladder
+against the wall, climbs up and brings them down to the meeting point, then
+carries it back to the truck. It reaches sills up to 80px above the sidewalk —
+about two storeys. Tap someone higher than that and the game says so:
+*TOO HIGH! CALL THE BIG LADDER!*
+
+With BACKUP LADDERS set to *crew drives*, the hand ladder goes out on its own
+whenever trapped people are stranded beyond every truck ladder's reach.
+
 ## People rules + rescues
 
 Nobody is ever shown in a burning window. When a window catches fire, its
@@ -84,8 +100,9 @@ sidewalk in front of their building (and hops with joy when it goes safe).
 Sometimes neighbors get **trapped**: a couple of people appear at a nearby
 window waving with a HELP bubble and a glowing ring. Any ladder can rescue
 them — rest a backup ladder tip on their window yourself (or let the crew do it
-with BACKUP LADDERS = crew drives), and in tap mode you can tap the window to send
-truck 1.
+with BACKUP LADDERS = crew drives), tap low windows to send truck 1's crew over
+on foot with the hand ladder, and in tap mode you can tap the window to send
+truck 1 driving.
 Rescues earn a star, and a building can't go
 "safe" while someone is still trapped. When backup is needed (a rescue waiting,
 or 2+ fires) the walkie-talkie pulses and the HUD calls it out.
@@ -150,7 +167,7 @@ so nothing depends on guessing what a value means.
 
 - **Built:** tap mode (one-tap auto), steps mode (setup sequence + manual aim),
   player-driven backup ladders (aim from the ladder top, hold to spray, ladder
-  rescues), window rescues
+  rescues), window rescues, the hand ladder carried on foot
 - **Planned:** drive the truck yourself for ladder reach
 
 ## Architecture
@@ -167,7 +184,7 @@ painted look.
 | `js/voice.js` | optional spoken instructions (speech synthesis, off by default) |
 | `js/scene.js` | sky, skyline, 4-building block, window grids + states, street, hydrants |
 | `js/particles.js` | flames, water drops, steam, confetti, star pops, wet surfaces |
-| `js/truck.js` | truck state machine: drive → deploy → raise → extend → spray |
+| `js/truck.js` | truck state machine: drive → deploy → raise → extend → spray, plus the hand-ladder crew |
 | `js/units.js` | walkie-talkie + two backup ladder trucks (player-aimed or automatic) |
 | `js/audio.js` | dependency-free WebAudio synth (siren, spray, chimes, fanfare) |
 | `js/game.js` | round flow, input, HUD, water-vs-fire collision |

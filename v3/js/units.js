@@ -1032,8 +1032,22 @@ FF.units = (function () {
         return manual() && trucks.some(u => u.state === 'READY');
     }
 
+    // could either backup ladder ever get to this window from its parking spot?
+    // (independent of what the trucks are doing right now — the far end of the
+    // block is simply out of their reach, and needs the hand ladder instead)
+    function canReach(win) {
+        if (!win) return false;
+        const cx = win.x + win.w / 2;
+        const cy = win.y + win.h + 12;
+        return trucks.some(u => {
+            const px = u.dir > 0 ? u.parkX + 11 : u.parkX + BODY_W - 11;
+            const py = GROUND - 22;
+            return Math.abs(cx - px) <= RANGE && Math.hypot(cx - px, cy - py) <= MAX_LEN;
+        });
+    }
+
     return {
-        update, draw, handleTap, reset, markWetAt, playerHasLadder,
+        update, draw, handleTap, reset, markWetAt, playerHasLadder, canReach,
         get trucks() { return trucks; }
     };
 })();

@@ -43,6 +43,123 @@ FF.truck = (function () {
         return FF.settings ? FF.settings.num('truckSpeed') : 1;
     }
 
+    // --- hand ladder carried on foot ---------------------------------------
+    //  The big ladder trucks can't reach the far end of the block, so a
+    //  firefighter from truck 1 walks a portable ladder over, leans it on the
+    //  wall, climbs up and brings the trapped people down.
+    const FOOT = {
+        REACH: 80,        // how high above the sidewalk a hand ladder gets
+        WALK: 1.15,       // world px per frame while carrying
+        PLANT_MS: 700,    // swinging the ladder up against the wall
+        CLIMB_MS: 900,
+        HELP_MS: 900,
+        LADDER_W: 22      // how long it looks while carried
+    };
+
+    const carry = {
+        state: 'IDLE',    // IDLE, WALK, PLANT, CLIMB, HELP, DOWN, PACK, BACK
+        x: 0, y: 0, dir: 1, t: 0,
+        win: null,
+        raise: 0,         // 0 flat on the shoulder -> 1 leaning on the wall
+        climb: 0          // 0 at the foot -> 1 at the sill
+    };
+
+    function sillHeight(win) {
+        return FF.scene.SIDEWALK_Y - (win.y + win.h);
+    }
+
+    // can the hand ladder get there at all?
+    function canFootReach(win) {
+        return !!win && sillHeight(win) <= FOOT.REACH;
+    }
+
+    function footBusy() {
+        return carry.state !== 'IDLE';
+    }
+
+    function ladderFootX(win) {
+        return win.x + win.w / 2 + 9;
+    }
+
+    function crewHomeX() {
+        return t.x + 58;
+    }
+
+    // send the crew over; returns false if they can't take the job
+    function sendLadder(win) {
+        if (footBusy() || !win || win.state !== 'help' || !canFootReach(win)) return false;
+        carry.win = win;
+        carry.x = crewHomeX();
+        carry.y = GROUND - 14;
+        carry.dir = -1;
+        carry.state = 'WALK';
+        carry.t = 0;
+        carry.raise = 0;
+        carry.climb = 0;
+        return true;
+    }
+
+    function updateFoot(dt, step) {
+        const c = carry;
+        if (c.state === 'IDLE') return;
+        c.t += dt;
+        const win = c.win;
+        const KERB = GROUND - FF.scene.SIDEWALK_Y;   // step up from road to sidewalk
+
+        switch (c.state) {
+            case 'WALK': {
+                // they got out another way while we were walking over
+                if (!win || win.state !== 'help') { c.state = 'BACK'; c.t = 0; break; }
+                const tx = ladderFootX(win) + 5;
+                const d = tx - c.x;
+                const sp = FOOT.WALK * step * speedMul();
+                if (Math.abs(d) <= sp) { c.x = tx; c.state = 'PLANT'; c.t = 0; }
+                else { c.dir = Math.sign(d); c.x += c.dir * sp; }
+                break;
+            }
+            case 'PLANT':
+                c.raise = Math.min(1, c.t / FOOT.PLANT_MS);
+                c.y = GROUND - 14 - KERB * c.raise;      // steps up onto the kerb
+                if (c.raise >= 1) {
+                    c.state = 'CLIMB';
+                    c.t = 0;
+                    if (FF.audio) FF.audio.ratchet();
+                }
+                break;
+            case 'CLIMB':
+                c.climb = Math.min(1, c.t / FOOT.CLIMB_MS);
+                if (c.climb >= 1) { c.state = 'HELP'; c.t = 0; }
+                break;
+            case 'HELP':
+                if (c.t >= FOOT.HELP_MS) {
+                    if (win && win.state === 'help' && FF.game && FF.game.onWindowRescued) {
+                        FF.game.onWindowRescued(win);
+                    }
+                    c.state = 'DOWN';
+                    c.t = 0;
+                }
+                break;
+            case 'DOWN':
+                c.climb = Math.max(0, 1 - c.t / (FOOT.CLIMB_MS * 0.8));
+                if (c.climb <= 0) { c.state = 'PACK'; c.t = 0; }
+                break;
+            case 'PACK':
+                c.raise = Math.max(0, 1 - c.t / FOOT.PLANT_MS);
+                c.y = GROUND - 14 - KERB * c.raise;
+                if (c.raise <= 0) { c.state = 'BACK'; c.t = 0; }
+                break;
+            case 'BACK': {
+                c.y = GROUND - 14;
+                const hx = crewHomeX();
+                const d = hx - c.x;
+                const sp = FOOT.WALK * step * speedMul();
+                if (Math.abs(d) <= sp) { c.state = 'IDLE'; c.win = null; }
+                else { c.dir = Math.sign(d); c.x += c.dir * sp; }
+                break;
+            }
+        }
+    }
+
     function isGroundFloor(win) {
         return win && win.row === FF.scene.buildings[win.b].floors - 1;
     }
@@ -114,6 +231,8 @@ FF.truck = (function () {
         t.stateT += dt;
         t.lightT += dt;
         if (t.wetT > 0) t.wetT -= dt;
+
+        updateFoot(dt, step);
 
         switch (t.state) {
             case 'DRIVING': {
@@ -561,10 +680,83 @@ FF.truck = (function () {
         }
     }
 
-    function draw(x) {
+    // a short ladder drawn from (px, py) along `ang` for `len`
+    function drawHandLadder(x, px, py, ang, len) {
+        x.save();
+        x.translate(px, py);
+        x.rotate(ang);
+        x.strokeStyle = P.steel;
+        x.lineWidth = 0.9;
+        x.lineCap = 'round';
+        x.beginPath(); x.moveTo(0, -1.9); x.lineTo(len, -1.9); x.stroke();
+        x.beginPath(); x.moveTo(0, 1.9); x.lineTo(len, 1.9); x.stroke();
+        x.strokeStyle = P.steelDark;
+        x.lineWidth = 0.6;
+        for (let r = 3; r < len - 1; r += 4) {
+            x.beginPath(); x.moveTo(r, -1.6); x.lineTo(r, 1.6); x.stroke();
+        }
+        x.restore();
+    }
+
+    function drawFoot(x, now) {
+        const c = carry;
+        if (c.state === 'IDLE') return;
+        const S = FF.sprites;
+
+        // walking there and back with the ladder on a shoulder
+        if (c.state === 'WALK' || c.state === 'BACK') {
+            const fr = Math.floor((now || 0) / 140) % 2;
+            const spr = fr ? S.ffWalk1 : S.ffWalk2;
+            drawHandLadder(x, c.x - 6, c.y + 4.5, -0.06, FOOT.LADDER_W);
+            if (c.dir < 0) {
+                x.save();
+                x.translate(c.x + 5, 0); x.scale(-1, 1); x.translate(-(c.x + 5), 0);
+                x.drawImage(spr, c.x, c.y, 10, 14);
+                x.restore();
+            } else {
+                x.drawImage(spr, c.x, c.y, 10, 14);
+            }
+            return;
+        }
+
+        const win = c.win;
+        if (!win) return;
+
+        // leaning on the wall: swings up from flat to the sill
+        const baseX = ladderFootX(win), baseY = FF.scene.SIDEWALK_Y;
+        const topX = win.x + win.w / 2, topY = win.y + win.h + 1;
+        const len = Math.hypot(topX - baseX, topY - baseY);
+        const up = Math.atan2(topY - baseY, topX - baseX);
+        const flat = topX >= baseX ? 0 : -Math.PI;
+        const ang = flat + (up - flat) * c.raise;
+        drawHandLadder(x, baseX, baseY, ang, len);
+
+        // the firefighter, on the ground or partway up the rungs
+        const climbing = c.state === 'CLIMB' || c.state === 'HELP' || c.state === 'DOWN';
+        const fx = baseX + Math.cos(ang) * len * (climbing ? c.climb : 0);
+        const fy = baseY + Math.sin(ang) * len * (climbing ? c.climb : 0);
+        const faceLeft = topX < baseX;
+        const spr = c.state === 'HELP' ? S.ffCheer : S.ffStand;
+        if (faceLeft) {
+            x.save();
+            x.translate(fx, 0); x.scale(-1, 1); x.translate(-fx, 0);
+            x.drawImage(spr, fx - 5, fy - 13, 10, 14);
+            x.restore();
+        } else {
+            x.drawImage(spr, fx - 5, fy - 13, 10, 14);
+        }
+
+        // the neighbour stepping onto the ladder
+        if (c.state === 'HELP' && win.occupant >= 0) {
+            x.drawImage(S.people[win.occupant], fx + (faceLeft ? 1 : -8), fy - 8, 7, 7);
+        }
+    }
+
+    function draw(x, now) {
         drawLadder(x);
         drawBody(x);
         drawCrew(x);
+        drawFoot(x, now);
     }
 
     function reset() {
@@ -577,6 +769,10 @@ FF.truck = (function () {
         t.crewOut = false;
         t.cheerT = 0;
         t.wetT = 0;
+        carry.state = 'IDLE';
+        carry.win = null;
+        carry.raise = 0;
+        carry.climb = 0;
     }
 
     function markWet() {
@@ -585,6 +781,8 @@ FF.truck = (function () {
 
     return {
         update, draw, dispatch, parkOnly, finishSpray, reset, ladderTip, markWet,
+        sendLadder, canFootReach, footBusy,
+        get footTarget() { return carry.win; },
         get state() { return t.state; },
         get target() { return t.target; },
         get busy() { return t.state !== 'IDLE' && t.state !== 'PACK'; },

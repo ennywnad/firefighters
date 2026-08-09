@@ -184,6 +184,10 @@ FF.game = (function () {
 
         if (mode() === 'tap') { tapModeTap(ix, iy); return; }
 
+        // tapping trapped people sends a firefighter over with a hand ladder,
+        // rather than hosing them down
+        if (tryFootRescue(ix, iy)) return;
+
         switch (phase) {
             case 'TAP_TRUCK':
                 if (inRect(ix, iy, FF.truck.rect, stepPad())) {
@@ -224,6 +228,49 @@ FF.game = (function () {
         sprayAudioOn = on;
         if (!FF.audio) return;
         if (on) FF.audio.sprayStart(); else FF.audio.sprayStop();
+    }
+
+    // steps mode: tap the trapped people and truck 1's crew carries a ladder
+    // over on foot. Returns true when the tap has been used up.
+    function tryFootRescue(ix, iy) {
+        const pad = tapPad();
+        let hit = null, hitD = Infinity;
+        FF.scene.windows.forEach(w => {
+            if (w.state !== 'help') return;
+            if (!inRect(ix, iy, w, pad)) return;
+            const d = Math.hypot(ix - (w.x + w.w / 2), iy - (w.y + w.h / 2));
+            if (d < hitD) { hitD = d; hit = w; }
+        });
+        if (!hit) return false;
+
+        if (FF.truck.footTarget === hit) return true;         // already on the way
+        if (FF.truck.footBusy()) {
+            flash('THE LADDER CREW IS BUSY! 🪜', 1600);
+            return true;
+        }
+        if (!FF.truck.canFootReach(hit)) {
+            flash('TOO HIGH! CALL THE BIG LADDER! 📻', 2400);
+            return true;
+        }
+        if (FF.truck.sendLadder(hit)) {
+            if (FF.audio) { FF.audio.tap(); FF.audio.ratchet(); }
+            flash('LADDER CREW, GO! 🪜', 1800);
+            return true;
+        }
+        return false;
+    }
+
+    // nobody else can get to them: send the hand ladder without being asked
+    function updateFootAuto() {
+        if (celebrated || S().v.backup !== 'auto') return;
+        if (FF.truck.footBusy()) return;
+        const win = FF.scene.windows.find(w =>
+            w.state === 'help' &&
+            FF.truck.canFootReach(w) &&
+            !(FF.units && FF.units.canReach(w)) &&
+            FF.truck.target !== w
+        );
+        if (win && FF.truck.sendLadder(win)) flash('LADDER CREW, GO! 🪜', 1800);
     }
 
     // tap mode: original tier-1 tap-the-fire (or tap trapped people).
@@ -393,6 +440,7 @@ FF.game = (function () {
 
         updateSpawning(dt);
         updateSpread(dt);
+        updateFootAuto();
 
         if (mode() === 'steps') {
             if (phase === 'ARRIVE' && FF.truck.state === 'STAGED') {
@@ -429,6 +477,9 @@ FF.game = (function () {
         let msg;
         if (flashMsg) {
             msg = flashMsg;
+        } else if (mode() === 'steps' && phase === 'READY' && footRescueWaiting()) {
+            msg = FF.truck.footBusy() ? 'THE LADDER CREW IS COMING! 🪜'
+                                      : 'TAP THE PEOPLE TO SEND A LADDER! 🪜';
         } else if (FF.units && FF.units.playerHasLadder() &&
                    (mode() === 'tap' || phase === 'READY')) {
             // the player is working a backup ladder: that takes priority
@@ -472,6 +523,15 @@ FF.game = (function () {
 
     function anyFires() {
         return FF.scene.windows.some(w => w.state === 'fire');
+    }
+
+    // trapped people the hand ladder could get to (the crew's job, either
+    // because no backup ladder reaches them or because they are simply low)
+    function footRescueWaiting() {
+        return FF.scene.windows.some(w =>
+            w.state === 'help' && FF.truck.canFootReach(w) &&
+            !(FF.units && FF.units.canReach(w))
+        );
     }
 
     function updateHud() {
