@@ -35,18 +35,21 @@ cooldown runs out, so a player can extinguish a whole building and keep it that 
 ## Options menu (⚙️ button)
 
 Everything persists in localStorage and applies live; the game pauses while the
-menu is open.
+menu is open. Each row spells out in plain English what it changes, and the
+values read as words rather than internal names — the same menu anatomy v3 uses,
+with v2's own smaller set of options.
 
 | Setting | Options | What it does |
 |---|---|---|
-| CONTROLS | steps / tap | v1-style step sequence + aim, or one-tap auto |
-| PEOPLE | on / off | occupants in windows |
-| NEW FIRES | chill / normal / busy | how often fires appear (10s / 6s / 3s) |
-| FIRES AT ONCE | 1 / 2 / 3 | max simultaneous fires |
-| FIRE SPREAD | off / slow / fast | fires jump to adjacent windows (14s / 7s) |
-| WATER POWER | gentle / strong | how long spraying takes |
-| SAFE TIME | short / medium / long | building cooldown (10s / 25s / 60s) |
-| STARS TO WIN | 5 / 8 / 12 | round length |
+| CONTROLS | set up + aim / one tap | tap the truck then the hydrant and hold to aim, or tap a fire and the crew does the rest |
+| STARS TO WIN | 5 / 8 / 12 | fires to put out before the confetti |
+| NEW FIRES | chill / normal / busy | how long until the next window lights: 10s / 6s / 3s |
+| FIRES AT ONCE | 1 / 2 / 3 | most windows burning at the same time |
+| FIRE SPREAD | never / slow / fast | fire jumps next door after 14s / 7s |
+| WATER POWER | gentle / strong | how fast your spray puts a fire out |
+| SAFE TIME | short / medium / long | how long a cleared building stays fireproof: 10s / 25s / 60s |
+| PEOPLE IN WINDOWS | on / off | neighbours waving from their windows |
+| START OVER | reset | puts every option back to its default |
 
 ## Growing with the player
 
@@ -65,7 +68,7 @@ Plain scripts (works from `file://`), one global namespace `FF`, low-res canvas
 | File | Owns |
 |---|---|
 | `js/sprites.js` | palette + string-map pixel sprites (firefighters, occupants) |
-| `js/settings.js` | options schema, localStorage persistence, menu UI |
+| `js/settings.js` | options schema (labels, help text, defaults), persistence, menu UI |
 | `js/scene.js` | sky, skyline, 3-building block, window grids + states, street |
 | `js/particles.js` | flames, water drops, steam, confetti, star pops |
 | `js/truck.js` | truck state machine: drive → deploy → raise → extend → spray |

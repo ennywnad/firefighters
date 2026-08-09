@@ -166,6 +166,20 @@ Before submitting a PR, test the following:
 - [ ] Audio can be muted
 - [ ] Text is readable at different sizes
 
+### Self-checks in the classic game (v1)
+
+v1 ships a small smoke-test suite (`js/testing.js`) that confirms the pieces the
+page needs are actually present. It stays out of the way on a normal visit:
+
+- **Run it:** load the game with `?test=1`, or call `gameTester.runTests()` from
+  the console. Results also land in `gameTester.results`.
+- **Optional checks:** Tone.js comes from a CDN and the game falls back to silent
+  stubs without it, so that check reports `SKIP` rather than failing when you are
+  offline.
+- **Chatty logs:** per-fire and per-utterance logging goes through `ffLog()` and
+  only appears when Debug is on — either the Debug option in the Options menu or
+  `?debug=1` in the address bar.
+
 ### Automated Testing
 
 Our CI pipeline automatically checks:
